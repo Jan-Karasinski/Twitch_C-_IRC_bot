@@ -2,6 +2,7 @@
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #include "IRC_Bot.h"
+#include "TwitchMessage.h"
 #include <iostream>
 #include <string_view>
 #include <fstream>
@@ -10,6 +11,15 @@
 namespace {
 	struct Config
 	{
+		inline bool is_good() {
+			using namespace std::string_literals;
+			return server  == ""s ||
+				   port    == ""s ||
+				   channel == ""s ||
+				   nick    == ""s ||
+				   token   == ""s;
+		}
+
 		std::string server;
 		std::string port;
 		std::string channel; // should start with '#'
@@ -47,14 +57,8 @@ namespace {
 		file >> temp >> temp; config.nick    = std::move(to_lower(temp));
 		file >> temp >> temp; config.token   = std::move(temp);
 		
-		using namespace std::string_literals;
-		if(config.server  == ""s,
-		   config.port    == ""s,
-		   config.channel == ""s, 
-		   config.nick    == ""s,
-		   config.token   == ""s)
-		{
-			std::cerr << "Error: config.txt is empty\n";
+		if(config.is_good()) {
+			std::cerr << "Error: config.txt is not properly filled out\n";
 			return std::nullopt;
 		}
 		

@@ -20,9 +20,9 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{31033E36-2DF5-45B7-81E3-F0895BD0402E}</ProjectGuid>
+    <ProjectGuid>{EE28B704-A532-4184-A1B4-C4E2EF598A6C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>TwitchCIRCbot</RootNamespace>
+    <RootNamespace>ParserTest</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -95,7 +95,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalLibraryDirectories>D:\boost\boost_1_65_1\stage\win32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -112,7 +112,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalLibraryDirectories>D:\boost\boost_1_65_1\stage\x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -133,7 +133,7 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalLibraryDirectories>D:\boost\boost_1_65_1\stage\win32\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -154,31 +154,28 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <AdditionalLibraryDirectories>D:\boost\boost_1_65_1\stage\x64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="IRC_Bot.h" />
-    <ClInclude Include="Logger.h" />
+    <ClInclude Include="..\Twitch_C++_IRC_bot\IRC_Bot.h" />
+    <ClInclude Include="..\Twitch_C++_IRC_bot\Logger.h" />
+    <ClInclude Include="..\Twitch_C++_IRC_bot\TwitchMessage.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TwitchMessage.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="IRC_Bot.cpp" />
-    <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="..\Twitch_C++_IRC_bot\IRC_Bot.cpp" />
+    <ClCompile Include="..\Twitch_C++_IRC_bot\Logger.cpp" />
+    <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessage.cpp" />
+    <ClCompile Include="ParserTest.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="TwitchMessage.cpp" />
-    <ClCompile Include="Twitch_C++_IRC_bot.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".clang-tidy" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

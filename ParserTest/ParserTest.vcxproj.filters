@@ -21,13 +21,13 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="IRC_Bot.h">
+    <ClInclude Include="..\Twitch_C++_IRC_bot\IRC_Bot.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TwitchMessage.h">
+    <ClInclude Include="..\Twitch_C++_IRC_bot\TwitchMessage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Logger.h">
+    <ClInclude Include="..\Twitch_C++_IRC_bot\Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -35,20 +35,17 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Twitch_C++_IRC_bot.cpp">
+    <ClCompile Include="ParserTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="IRC_Bot.cpp">
+    <ClCompile Include="..\Twitch_C++_IRC_bot\IRC_Bot.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TwitchMessage.cpp">
+    <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Logger.cpp">
+    <ClCompile Include="..\Twitch_C++_IRC_bot\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".clang-tidy" />
   </ItemGroup>
 </Project>
