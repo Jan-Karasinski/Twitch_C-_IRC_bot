@@ -92,7 +92,8 @@ int main() {
 	};
 
 	Twitch::IRC::TwitchBot bot(
-		controller
+		controller,
+		std::make_unique<Twitch::IRC::Message::MessageParser>(controller)
 	);
 	bot.run();
 }

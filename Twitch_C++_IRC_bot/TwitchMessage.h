@@ -1,6 +1,6 @@
 #ifndef TWITCHMESSAGE_H
 #define TWITCHMESSAGE_H
-
+#include "Logger.h"
 #include <boost\variant.hpp>
 #include <iostream>
 #include <memory>
@@ -159,22 +159,23 @@ namespace Twitch::IRC::Message {
 	{
 	public:
 		using result_t = boost::variant<
-			ParseError, PING, Plain_message, Cap::Tags::PRIVMSG, Cap::Tags::BITS
+			ParseError, PING, Plain_message,
+			Cap::Tags::PRIVMSG, Cap::Tags::BITS
 		>;
 
 		result_t process(std::string_view recived_message);
 
-		template<class Logger>
-		ParserVisitor<Logger> get_visitor() {
-			return { m_controller.get() };
+		template<class TLogger = Logger::DefaultLogger>
+		ParserVisitor<TLogger> get_visitor() {
+			return { m_writer.get() };
 		}
 
-		explicit MessageParser(std::shared_ptr<IController> irc_controller);
+		MessageParser(std::shared_ptr<IRCWriter> irc_writer);
 
 	private:
-		std::shared_ptr<IController> m_controller;
+		std::shared_ptr<IRCWriter> m_writer;
 	};
-} // namespace Message
+} // namespace Twitch::IRC::Message
 
 std::ostream& operator<<(std::ostream& stream, const Twitch::IRC::Message::PING& ping);
 std::ostream& operator<<(std::ostream& stream, const Twitch::IRC::Message::Plain_message& plainmsg);

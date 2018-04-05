@@ -303,8 +303,8 @@ namespace Twitch::IRC::Message {
 		return ParseError{ "Message type not handled: "s + recived_message.data() };
 	}
 
-	MessageParser::MessageParser(std::shared_ptr<IController> irc_controller)
-		: m_controller(irc_controller)
+	MessageParser::MessageParser(std::shared_ptr<IRCWriter> irc_writer)
+		: m_writer(irc_writer)
 	{
 	}
 }

@@ -1,5 +1,6 @@
 #ifndef IRC_BOT_H
 #define IRC_BOT_H
+#include "TwitchMessage.h"
 #include <WinSock2.h>
 #include <boost\asio.hpp>
 #include <memory>
@@ -10,9 +11,9 @@
 
 namespace Twitch::IRC {
 	using io_service_t = boost::asio::io_service;
-	using resolver_t = boost::asio::ip::tcp::resolver;
-	using socket_t = boost::asio::ip::tcp::socket;
-	using streambuf_t = boost::asio::streambuf;
+	using resolver_t   = boost::asio::ip::tcp::resolver;
+	using socket_t     = boost::asio::ip::tcp::socket;
+	using streambuf_t  = boost::asio::streambuf;
 	using error_code_t = boost::system::error_code;
 	
 	struct IRCReader
@@ -67,7 +68,7 @@ namespace Twitch::IRC {
 
 	public:
 		static const std::string m_delimiter;
-		const std::chrono::milliseconds m_write_delay{ 1500 };
+		const std::chrono::milliseconds m_write_delay{ 667 };
 
 	private:
 		const std::string m_server;
@@ -81,7 +82,8 @@ namespace Twitch::IRC {
 	{
 	public:
 		explicit TwitchBot(
-			std::shared_ptr<IController> irc_controller
+			std::shared_ptr<IController> irc_controller,
+			std::unique_ptr<Message::MessageParser> t_parser
 		);
 		TwitchBot(TwitchBot&&) = default;
 		TwitchBot& operator=(TwitchBot&&) = default;
@@ -95,6 +97,7 @@ namespace Twitch::IRC {
 
 	private:
 		std::shared_ptr<IController> m_controller;
+		std::unique_ptr<Message::MessageParser> m_parser;
 	};
-}  // namespace Twitch
+}  // namespace Twitch::IRC
 #endif

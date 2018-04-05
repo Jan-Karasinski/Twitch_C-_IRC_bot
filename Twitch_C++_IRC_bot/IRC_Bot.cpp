@@ -2,6 +2,7 @@
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #include "IRC_Bot.h"
+#include "Logger.h"
 #include <boost\algorithm\string.hpp>
 #include <boost\algorithm\string\predicate.hpp>
 #include <iostream>
@@ -106,14 +107,16 @@ namespace Twitch::IRC {
 	const std::string Controller::m_delimiter{ "\r\n" };
 
 	TwitchBot::TwitchBot(
-		std::shared_ptr<IController> irc_controller
+		std::shared_ptr<IController> irc_controller,
+		std::unique_ptr<Message::MessageParser> t_parser
 	) :
-		m_controller(irc_controller)
+		m_controller(irc_controller),
+		m_parser(std::move(t_parser))
 	{
 	}
 
 	void TwitchBot::run() {
-		if (auto error = m_controller->connect();  error) {
+		if (auto error = m_controller->connect(); error) {
 			std::cerr << error.message() << '\n';
 			return;
 		}
@@ -143,14 +146,14 @@ namespace Twitch::IRC {
 			std::string recived_message;
 			std::getline(std::istream(&m_controller->m_buffer), recived_message);
 
-			if (boost::starts_with(recived_message, "PING")) {
-				using namespace std::string_literals;
-				m_controller->write("PONG :tmi.twitch.tv"s);
-			}
-			std::cout << recived_message << '\n';
+			auto parse_result = m_parser->process(recived_message);
+			boost::apply_visitor(
+				m_parser->get_visitor(),
+				parse_result
+			);
 			
 			using namespace std::chrono_literals;
-			std::this_thread::sleep_for(10ms);
+			std::this_thread::sleep_for(5ms);
 		}
 	}
 }
