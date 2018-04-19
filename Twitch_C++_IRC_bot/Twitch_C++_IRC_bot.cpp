@@ -84,16 +84,16 @@ int main() {
 	}
 
 	auto controller{
-		std::make_shared<Twitch::IRC::Controller>(
+		std::make_shared<Twitch::irc::Controller>(
 			config->server, config->port, config->channel,
 			config->nick, config->token,
 			std::chrono::milliseconds(667)
 		)
 	};
 
-	Twitch::IRC::TwitchBot bot(
+	Twitch::irc::TwitchBot bot(
 		controller,
-		std::make_unique<Twitch::IRC::Message::MessageParser>(controller)
+		std::make_unique<Twitch::irc::message::MessageParser>(controller)
 	);
 	bot.run();
 }

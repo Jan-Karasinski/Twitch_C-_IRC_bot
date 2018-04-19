@@ -3,13 +3,13 @@
 #include "TwitchMessage.h"
 #include <WinSock2.h>
 #include <boost\asio.hpp>
+#include <chrono>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
-#include <chrono>
 
-namespace Twitch::IRC {
+namespace Twitch::irc {
 	using io_service_t = boost::asio::io_service;
 	using resolver_t   = boost::asio::ip::tcp::resolver;
 	using socket_t     = boost::asio::ip::tcp::socket;
@@ -35,7 +35,7 @@ namespace Twitch::IRC {
 		virtual error_code_t join_channel() = 0;
 		virtual error_code_t cap(const std::string& cap) = 0;
 		virtual bool is_alive() const noexcept = 0;
-		virtual ~IController() = default;
+		~IController() override = default;
 
 	private:
 		io_service_t io_service;
@@ -43,7 +43,7 @@ namespace Twitch::IRC {
 	public:
 		resolver_t resolver{ io_service };
 		socket_t m_socket{ io_service };
-		streambuf_t m_buffer;
+		streambuf_t m_buffer{};
 	};
 
 	class Controller : public IController
@@ -62,9 +62,9 @@ namespace Twitch::IRC {
 		error_code_t login() override;
 		error_code_t join_channel() override;
 		error_code_t cap(const std::string& cap) override;
-		virtual error_code_t read() override;
-		virtual error_code_t write(const std::string& message) override;
-		virtual bool is_alive() const noexcept override;
+		error_code_t read() override;
+		error_code_t write(const std::string& message) override;
+		bool is_alive() const noexcept override;
 
 	public:
 		static const std::string m_delimiter;
@@ -83,7 +83,7 @@ namespace Twitch::IRC {
 	public:
 		explicit TwitchBot(
 			std::shared_ptr<IController> irc_controller,
-			std::unique_ptr<Message::MessageParser> t_parser
+			std::unique_ptr<message::MessageParser> t_parser
 		);
 		TwitchBot(TwitchBot&&) = default;
 		TwitchBot& operator=(TwitchBot&&) = default;
@@ -97,7 +97,7 @@ namespace Twitch::IRC {
 
 	private:
 		std::shared_ptr<IController> m_controller;
-		std::unique_ptr<Message::MessageParser> m_parser;
+		std::unique_ptr<message::MessageParser> m_parser;
 	};
-}  // namespace Twitch::IRC
+}  // namespace Twitch::irc
 #endif

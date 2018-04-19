@@ -10,7 +10,7 @@
 #include <regex>
 #include <optional>
 
-namespace Twitch::IRC {
+namespace Twitch::irc {
 	Controller::Controller(
 		const std::string& t_server,
 		const std::string& t_port,
@@ -108,7 +108,7 @@ namespace Twitch::IRC {
 
 	TwitchBot::TwitchBot(
 		std::shared_ptr<IController> irc_controller,
-		std::unique_ptr<Message::MessageParser> t_parser
+		std::unique_ptr<message::MessageParser> t_parser
 	) :
 		m_controller(irc_controller),
 		m_parser(std::move(t_parser))

@@ -2,10 +2,10 @@
 #define LOGGER_H
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
-#include <iostream>
-#include <ios>
-#include <fstream>
 #include <boost\filesystem.hpp>
+#include <fstream>
+#include <ios>
+#include <iostream>
 
 namespace Logger {
 	const boost::filesystem::path log_path{
@@ -17,7 +17,7 @@ namespace Logger {
 		inline static DummyLogger get() noexcept { return {}; };
 
 		template<typename T>
-		DummyLogger& operator<<(T&&) {
+		DummyLogger& operator<<(T&& /*unused*/) {
 			return *this;
 		}
 	};
@@ -38,4 +38,4 @@ namespace Logger {
 	};
 
 } // namespace Logger
-#endif // !LOGGER_H
+#endif // LOGGER_H
