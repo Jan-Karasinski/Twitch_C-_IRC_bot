@@ -9,15 +9,40 @@
 #include <optional>
 
 namespace {
+	bool starts_with(std::string_view str, std::string_view with) {
+		if (str.size() < with.size()) { return false; }
+
+		for (size_t i = 0; i < with.size(); ++i) {
+			if (str[i] != with[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	template<
+		class CharT,
+		class Traits,
+		class Allocator
+	> auto& to_lower(std::basic_string<CharT, Traits, Allocator>& str) {
+		for (auto& c : str) {
+			c = std::tolower(c);
+		}
+		return str;
+	}
+	
 	struct Config
 	{
 		inline bool is_good() {
-			using namespace std::string_literals;
-			return server  == ""s ||
-				   port    == ""s ||
-				   channel == ""s ||
-				   nick    == ""s ||
-				   token   == ""s;
+			return
+				!server.empty()  &&
+			    !port.empty()    &&
+				!channel.empty() &&
+			    !nick.empty()    &&
+			    !token.empty()   &&
+				starts_with(channel, "#") &&
+				starts_with(token, "oauth:")
+			;
 		}
 
 		std::string server;
@@ -26,21 +51,6 @@ namespace {
 		std::string nick;	 // all lower case
 		std::string token;   // should start with "oauth:"
 	};
-
-	std::string& to_lower(std::string& str) {
-		for (auto& c : str) {
-			c = std::tolower(c);
-		}
-		return str;
-	}
-
-	bool starts_with(std::string_view str, std::string_view with) {
-		for (size_t i = 0; i < with.size(); ++i) {
-			if (str[i] != with[i])
-				return false;
-		}
-		return true;
-	}
 
 	std::optional<Config> get_config() {
 		Config config;
@@ -57,7 +67,7 @@ namespace {
 		file >> temp >> temp; config.nick    = std::move(to_lower(temp));
 		file >> temp >> temp; config.token   = std::move(temp);
 		
-		if(config.is_good()) {
+		if(!config.is_good()) {
 			std::cerr << "Error: config.txt is not properly filled out\n";
 			return std::nullopt;
 		}
@@ -87,11 +97,20 @@ int main() {
 		std::make_shared<Twitch::irc::Controller>(
 			config->server, config->port, config->channel,
 			config->nick, config->token,
-			std::chrono::milliseconds(667)
+			std::chrono::milliseconds{ 667 }
 		)
 	};
 
+	using Twitch::irc::message::cap::tags::PRIVMSG;
 	Twitch::irc::TwitchBot bot(
+		{
+			{
+				"!Hello",
+				[](const PRIVMSG& msg) {
+					return '@' + msg.display_name + " World!";
+				}
+			}
+		},
 		controller,
 		std::make_unique<Twitch::irc::message::MessageParser>(controller)
 	);

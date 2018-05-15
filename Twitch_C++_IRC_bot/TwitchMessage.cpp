@@ -3,6 +3,7 @@
 #define _SCL_SECURE_NO_WARNINGS
 #include "TwitchMessage.h"
 #include "IRC_Bot.h"
+#include <boost\log\trivial.hpp>
 #include <boost\algorithm\string\classification.hpp>
 #include <boost\algorithm\string\split.hpp>
 #include <boost\algorithm\string\replace.hpp>
@@ -10,53 +11,15 @@
 #include <exception>
 #include <string_view>
 #include <sstream>
-
-using namespace std::string_literals;
-using namespace std::string_view_literals;
+#include <type_traits>
 
 namespace { // helpers
 	using Twitch::irc::message::cap::tags::Badge;
-	using Twitch::irc::message::cap::tags::UserType;
 	using Twitch::irc::message::cap::tags::BadgeLevel;
-
-	inline Badge string_to_badge(std::string_view badge) {
-		if      (badge == "subscriber"sv)  { return Badge::subscriber; }
-		else if (badge == "bits"sv)        { return Badge::bits; }
-		else if (badge == "turbo"sv)       { return Badge::turbo; }
-		else if (badge == "moderator"sv)   { return Badge::moderator; }
-		else if (badge == "broadcaster"sv) { return Badge::broadcaster; }
-		else if (badge == "global_mod"sv)  { return Badge::global_mod; }
-		else if (badge == "admin"sv)       { return Badge::admin; }
-		else if (badge == "staff"sv)       { return Badge::staff; }
-		else 
-			return Badge::unhandled_badge;
-	}
-
-	inline std::string badge_to_string(Badge badge) {
-		if      (badge == Badge::subscriber)  { return "subscriber"s; }
-		else if (badge == Badge::bits)        { return "bits"s; }
-		else if (badge == Badge::turbo)       { return "turbo"s; }
-		else if (badge == Badge::moderator)   { return "moderator"s; }
-		else if (badge == Badge::broadcaster) { return "broadcaster"s; }
-		else if (badge == Badge::global_mod)  { return "global_mod"s; }
-		else if (badge == Badge::admin)       { return "admin"s; }
-		else if (badge == Badge::staff)       { return "staff"s; }
-		else
-			return "unhandled_badge"s;
-	}
-
-	inline std::string user_type_to_string(UserType utype) {
-		if      (utype == UserType::empty)      { return ""s; }
-		else if (utype == UserType::mod)        { return "mod"s; }
-		else if (utype == UserType::global_mod) { return "global_mod"s; }
-		else if (utype == UserType::admin)      { return "admin"s; }
-		else if (utype == UserType::staff)      { return "staff"s; }
-		else
-			return "unhandled_type"s;
-	}
+	using Twitch::irc::message::cap::tags::UserType;
 
 	std::map<Badge, BadgeLevel> get_badges(std::string_view raw_badges) {
-		if (raw_badges.size() == 0) { return {}; }
+		if (raw_badges.empty()) { return {}; }
 
 		std::vector<std::string> splitted;
 		boost::split(
@@ -65,12 +28,12 @@ namespace { // helpers
 			boost::is_any_of(",/"),
 			boost::algorithm::token_compress_on
 		);
-		if (splitted.size() % 2 != 0) return {};
+		if (splitted.size() % 2 != 0 || splitted.empty()) { return {}; }
 
 		std::map<Badge, BadgeLevel> badges;
 		for (std::size_t i{ 0 }; i < splitted.size() / 2; i += 2) {
 			badges.emplace(
-				string_to_badge(splitted[i]),
+				Badge::from_string(splitted[i]),
 				std::stoi(splitted[i + 1])
 			);
 		}
@@ -78,38 +41,22 @@ namespace { // helpers
 	}
 
 	inline bool get_mod(std::string_view raw_message) noexcept {
+		using namespace std::string_view_literals;
 		return raw_message == "1"sv;
 	}
 
 	inline bool get_subscriber(std::string_view raw_message) noexcept {
+		using namespace std::string_view_literals;
 		return raw_message == "1"sv;
-	}
-
-	std::time_t get_tmi_sent_ts(std::string_view raw_message) {
-		std::stringstream stream{ raw_message.data() };
-		std::time_t ts;
-		stream >> ts;
-		return ts;
 	}
 
 	inline bool get_turbo(std::string_view raw_message) noexcept {
+		using namespace std::string_view_literals;
 		return raw_message == "1"sv;
 	}
 
-	inline UserType get_user_type(std::string_view raw_message) {
-		// most common case
-		if (raw_message.size() == 0) { return UserType::empty; }
-
-		// reverse order as there are more mods than staff members
-		else if (raw_message == "mod"sv)        { return UserType::mod; }
-		else if (raw_message == "global_mod"sv) { return UserType::global_mod; }
-		else if (raw_message == "admin"sv)      { return UserType::admin; }
-		else if (raw_message == "staff"sv)      { return UserType::staff; }
-		else
-			return UserType::unhandled_type;
-	}
-
 	std::vector<std::string> get_list_of_names(std::string_view raw_list) {
+		using namespace std::string_view_literals;
 		if (raw_list == "End of /NAMES list"sv) { return {}; }
 
 		std::vector<std::string> names;
@@ -119,14 +66,68 @@ namespace { // helpers
 			[](auto c) -> bool { return c == ' '; },
 			boost::token_compress_on
 		);
-		return std::move(names);
+		return names;
 	}
 
 	unsigned int get_bits(std::string_view raw_bits) {
 		std::stringstream stream{ raw_bits.data() };
-		unsigned long ts;
-		stream >> ts;
-		return ts;
+		unsigned long bits;
+		stream >> bits;
+		return bits;
+	}
+
+	template<typename T>
+	std::optional<T> get_optional(std::string&& raw) {
+		try {
+			std::stringstream str{ raw };
+			T result;
+			str >> result;
+			return result;
+		}
+		catch (...) {
+			return std::nullopt;
+		}
+	}
+
+	template<>
+	std::optional<bool> get_optional(std::string&& raw) {
+		using namespace std::string_literals;
+		if (raw == "1"s) { return 1; }
+		if (raw == "0"s) { return 0; }
+
+		return std::nullopt;
+	}
+
+	template<>
+	std::optional<std::string> get_optional(std::string&& raw) {
+		if (raw.empty()) { return std::nullopt; }
+
+		return std::move(raw);
+	}
+
+	template<>
+	std::optional<std::chrono::seconds> get_optional(std::string&& raw) {
+		try {
+			return std::chrono::seconds{ std::stoll(raw) };
+		}
+		catch (...) {
+			return std::nullopt;
+		}
+	}
+
+	template<>
+	std::optional<int> get_optional(std::string&& raw) {
+		try {
+			return std::stoi(raw);
+		}
+		catch (...) {
+			return std::nullopt;
+		}
+	}
+
+	inline std::chrono::seconds get_ts(std::string&& raw) {
+		using namespace std::chrono_literals;
+		return get_optional<std::chrono::seconds>(std::move(raw)).value_or(0s);
 	}
 }
 
@@ -145,33 +146,50 @@ namespace Twitch::irc::message {
 		};
 	}
 
-	const std::regex Plain_message::regex{
-		R"(:(.+)!(.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?)"
+	bool operator==(const PING& lhs, const PING& rhs) {
+		return lhs.host == rhs.host;
+	}
+
+	bool operator!=(const PING& lhs, const PING& rhs) {
+		return !(lhs == rhs);
+	}
+
+	const std::regex PRIVMSG::regex{
+		R"(:(.+)!(?:.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?)"
 	};
-	std::optional<Plain_message> Plain_message::is(std::string_view raw_message) {
+	std::optional<PRIVMSG> PRIVMSG::is(std::string_view raw_message) {
 		std::cmatch match;
 		if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-		constexpr const size_t nick = 1;
-		constexpr const size_t user = 2;
-		constexpr const size_t host = 3;
-		constexpr const size_t target = 4;
-		constexpr const size_t message = 5;
+		constexpr const size_t user    = 1;
+		constexpr const size_t host    = 2;
+		constexpr const size_t channel = 3;
+		constexpr const size_t message = 4;
 
-		return Plain_message{
-			std::move(match.str(nick)),
-			std::move(match.str(user)),
-			std::move(match.str(host)),
-			std::move(match.str(target)),
-			std::move(match.str(message))
+		return PRIVMSG{
+			match.str(user),
+			match.str(host),
+			match.str(channel),
+			match.str(message)
 		};
+	}
+
+	bool operator==(const PRIVMSG& lhs, const PRIVMSG& rhs) {
+		return lhs.user    == rhs.user
+			&& lhs.host    == rhs.host
+			&& lhs.channel == rhs.channel
+			&& lhs.message == rhs.message;
+	}
+
+	bool operator!=(const PRIVMSG& lhs, const PRIVMSG& rhs) {
+		return !(lhs == rhs);
 	}
 
 	namespace cap {
 		namespace membership {
 			const std::regex JOIN::regex{
 				// first 3 groups are identical
-				R"(:(.+)!(?:.+)@(?:.+).tmi.twitch.tv JOIN (#.+)[\r\n|\r|\n]?)"
+				":(.+)!(?:.+)@(?:.+).tmi.twitch.tv JOIN (#.+)[\r\n|\r|\n]?"
 			};
 			std::optional<JOIN> JOIN::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -186,8 +204,17 @@ namespace Twitch::irc::message {
 				};
 			}
 
+			bool operator==(const JOIN& lhs, const JOIN& rhs) {
+				return lhs.user    == rhs.user
+					&& lhs.channel == rhs.channel;
+			}
+
+			bool operator!=(const JOIN& lhs, const JOIN& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex MODE::regex{
-				R"(:jtv MODE (#.+) ([+-])o (.+)[\r\n|\r|\n]?)"
+				":jtv MODE (#.+) ([+-])o (.+)[\r\n|\r|\n]?"
 			};
 			std::optional<MODE> MODE::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -204,7 +231,16 @@ namespace Twitch::irc::message {
 				};
 			}
 
-			const std::string NAMES::EOL = "366"s;
+			bool operator==(const MODE& lhs, const MODE& rhs) {
+				return lhs.channel == rhs.channel
+					&& lhs.gained  == rhs.gained
+					&& lhs.user    == rhs.user;
+			}
+
+			bool operator!=(const MODE& lhs, const MODE& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex NAMES::regex{
 				R"(:(.+).tmi.twitch.tv (353|366) (?:.+) (?:= )?(#.+) :(.+)[\r\n|\r|\n]?)"
 			};
@@ -212,17 +248,31 @@ namespace Twitch::irc::message {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t user   = 1;
-				constexpr const size_t msg_id = 2;
+				constexpr const size_t user    = 1;
+				constexpr const size_t msg_id  = 2;
 				constexpr const size_t channel = 3;
-				constexpr const size_t list   = 4;
+				constexpr const size_t list    = 4; //-V112
 
+				const std::string msg{ match.str(list) };
+				
+				using namespace std::string_literals;
 				return NAMES{
 					match.str(user),
-					match.str(msg_id) == NAMES::EOL,
+					match.str(msg_id),
 					match.str(channel),
-					get_list_of_names(match.str(list)),
+					get_list_of_names(msg == "End of /NAMES list"s ? ""s : match.str(list))
 				};
+			}
+
+			bool operator==(const NAMES& lhs, const NAMES& rhs) {
+				return lhs.user    == rhs.user
+					&& lhs.msg_id  == rhs.msg_id
+					&& lhs.channel == rhs.channel
+					&& lhs.names   == rhs.names;
+			}
+
+			bool operator!=(const NAMES& lhs, const NAMES& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex PART::regex{
@@ -242,100 +292,152 @@ namespace Twitch::irc::message {
 				};
 			}
 
+			bool operator==(const PART& lhs, const PART& rhs) {
+				return lhs.user == rhs.user
+					&& lhs.channel == rhs.channel;
+			}
+
+			bool operator!=(const PART& lhs, const PART& rhs) {
+				return !(lhs == rhs);
+			}
+
 		}
 		namespace tags {
 			const std::regex CLEARCHAT::regex{
-				R"(@(?:ban-duration=([0-9]+);)?ban-reason=(.*) :tmi.twitch.tv CLEARCHAT (#.+) :(.+)[\r\n|\r|\n]?)"
+				"@(?:ban-duration=([0-9]+);)?(?:ban-reason=([^; ]*))?;"
+				"room-id=([^; ]+);(?:target-user-id=([^; ]+);)?tmi-sent-ts=([0-9]+)"
+				" :tmi.twitch.tv CLEARCHAT (#.+)(?: :(.+))?[\r\n|\r|\n]?"
 			};
 			std::optional<CLEARCHAT> CLEARCHAT::is(std::string_view raw_message) {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t duration = 1;
-				constexpr const size_t reason = 2;
-				constexpr const size_t channel = 3;
-				constexpr const size_t user = 4;
+				Logger::DefaultLogger::get() << "Debug test: " << raw_message << '\n';
+
+				constexpr const size_t duration       = 1;
+				constexpr const size_t reason         = 2;
+				constexpr const size_t room_id        = 3;
+				constexpr const size_t target_user_id = 4;
+				constexpr const size_t tmi_sent_ts    = 5;
+				constexpr const size_t channel        = 6;
+				constexpr const size_t user           = 7;
 
 				return CLEARCHAT{
-					std::atoi(match.str(duration).c_str()),
-					boost::replace_all_copy(match.str(reason), R"(\s)", " "),
-					match.str(channel),
-					match.str(user)
+					commands::CLEARCHAT{
+						match.str(channel), match.str(user)
+					},
+					get_optional<std::chrono::seconds>(match.str(duration)),
+					get_optional<std::string>(boost::replace_all_copy(match.str(reason), R"(\s)", " ")),
+					match.str(room_id),
+					get_optional<std::string>(match.str(target_user_id)),
+					get_ts(match.str(tmi_sent_ts))
 				};
 			}
 
 			CLEARCHAT::CLEARCHAT(
-				std::time_t&& t_duration,
-				std::string&& t_reason,
-				std::string&& t_channel,
-				std::string&& t_user
+				commands::CLEARCHAT&&        t_plain,
+				std::optional<std::chrono::seconds> t_duration,
+				std::optional<std::string>&& t_reason,
+				std::string&&                t_room_id,
+				std::optional<std::string>&& t_target_user_id,
+				std::chrono::seconds         t_tmi_sent_ts
 			) :
-				cap::commands::CLEARCHAT{ std::move(t_channel), std::move(t_user) },
-				ban_duration(std::move(t_duration)),
-				ban_reason(std::move(t_reason))
+				cap::commands::CLEARCHAT{ std::move(t_plain) },
+				ban_duration(t_duration),
+				ban_reason(std::move(t_reason)),
+				room_id(std::move(t_room_id)),
+				target_user_id(std::move(t_target_user_id)),
+				tmi_sent_ts(t_tmi_sent_ts)
 			{
 			}
 
+			bool operator==(const CLEARCHAT& lhs, const CLEARCHAT& rhs) {
+				return lhs.ban_duration   == rhs.ban_duration
+					&& lhs.ban_reason     == rhs.ban_reason
+					&& lhs.room_id        == rhs.room_id
+					&& lhs.target_user_id == rhs.target_user_id
+					&& lhs.tmi_sent_ts    == rhs.tmi_sent_ts
+
+					&& static_cast<commands::CLEARCHAT>(lhs)
+						== static_cast<commands::CLEARCHAT>(rhs);
+			}
+
+			bool operator!=(const CLEARCHAT& lhs, const CLEARCHAT& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex GLOBALUSERSTATE::regex{
-				R"(@color=([^;]*);display-name=([^;]*);emote-sets=([^;]*);turbo=([01]);)"
-				R"(user-id=([^;]+);user-type=([^ ]*) :tmi.twitch.tv GLOBALUSERSTATE[\r\n|\r|\n]?)"
+				"@badges=([^; ]*);color=([^; ]*);display-name=([^; ]*);"
+				"emote-sets=([^; ]*);user-id=([^; ]+);user-type=([^ ]*)"
+				" :tmi.twitch.tv GLOBALUSERSTATE[\r\n|\r|\n]?"
 			};
 			std::optional<GLOBALUSERSTATE> GLOBALUSERSTATE::is(std::string_view raw_message) {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t color = 1;
-				constexpr const size_t display_name = 2;
-				constexpr const size_t emote_sets = 3;
-				constexpr const size_t turbo = 4;
-				constexpr const size_t user_id = 5;
-				constexpr const size_t user_type = 6;
+				constexpr const size_t badges       = 1;
+				constexpr const size_t color        = 2;
+				constexpr const size_t display_name = 3;
+				constexpr const size_t emote_sets   = 4;
+				constexpr const size_t user_id      = 5;
+				constexpr const size_t user_type    = 6;
 
 				return GLOBALUSERSTATE{
+					get_badges(match.str(badges)),
 					match.str(color),
 					match.str(display_name),
 					match.str(emote_sets),
-					match.str(turbo)[0] == '1',
 					match.str(user_id),
-					get_user_type(match.str(user_type))
+					UserType::from_string(match.str(user_type))
 				};
 			}
 
+			bool operator==(const GLOBALUSERSTATE& lhs, const GLOBALUSERSTATE& rhs) {
+				return lhs.badges       == rhs.badges
+					&& lhs.color        == rhs.color
+					&& lhs.display_name == rhs.display_name
+					&& lhs.emote_set    == rhs.emote_set
+					&& lhs.user_id      == rhs.user_id
+					&& lhs.user_type    == rhs.user_type;
+			}
+
+			bool operator!=(const GLOBALUSERSTATE& lhs, const GLOBALUSERSTATE& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex PRIVMSG::regex{
-				R"(@badges=([^;]*);(?:bits=([0-9]+);)?color=([^;]*);display-name=([^;]*);emotes=([^;]*);id=([^;]+);mod=([01]);room-id=([0-9]+);)"
-				R"(subscriber=([01]);tmi-sent-ts=([0-9]+);turbo=([01]);user-id=([0-9]+);user-type=([^ ]*))"
-				R"( :(.+)!(.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?)"
+				"@badges=([^;]*);(?:bits=([0-9]+);)?color=([^;]*);display-name=([^;]*);emotes=([^;]*);id=([^;]+);mod=([01]);room-id=([0-9]+);"
+				"subscriber=([01]);tmi-sent-ts=([0-9]+);turbo=([01]);user-id=([0-9]+);user-type=([^ ]*)"
+				" :(.+)!(?:.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?"
 			};
 			std::optional<PRIVMSG> PRIVMSG::is(std::string_view raw_message) {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t badges = 1;
-				constexpr const size_t bits = 2;
-				constexpr const size_t color = 3;
+				constexpr const size_t badges       = 1;
+				constexpr const size_t bits         = 2;
+				constexpr const size_t color        = 3;
 				constexpr const size_t display_name = 4;
-				constexpr const size_t emotes = 5;
-				constexpr const size_t id = 6;
-				constexpr const size_t mod = 7;
-				constexpr const size_t room_id = 8;
-				constexpr const size_t subscriber = 9;
-				constexpr const size_t tmi_sent_ts = 10;
-				constexpr const size_t turbo = 11;
-				constexpr const size_t user_id = 12;
-				constexpr const size_t user_type = 13;
-				constexpr const size_t nick = 14;
-				constexpr const size_t user = 15;
-				constexpr const size_t host = 16;
-				constexpr const size_t target = 17;
-				constexpr const size_t message = 18;
+				constexpr const size_t emotes       = 5;
+				constexpr const size_t id           = 6;
+				constexpr const size_t mod          = 7;
+				constexpr const size_t room_id      = 8;
+				constexpr const size_t subscriber   = 9;
+				constexpr const size_t tmi_sent_ts  = 10;
+				constexpr const size_t turbo        = 11;
+				constexpr const size_t user_id      = 12;
+				constexpr const size_t user_type    = 13;
+				constexpr const size_t user         = 14;
+				constexpr const size_t host         = 15;
+				constexpr const size_t channel      = 16;
+				constexpr const size_t message      = 17;
 
 				return PRIVMSG{
-					Plain_message{
-						std::move(match.str(nick)),
-						std::move(match.str(user)),
-						std::move(match.str(host)),
-						std::move(match.str(target)),
-						std::move(match.str(message))
+					message::PRIVMSG{
+						match.str(user),
+						match.str(host),
+						match.str(channel),
+						match.str(message)
 					},
 					get_badges(match.str(badges)),
 					get_bits(match.str(bits)),
@@ -346,19 +448,15 @@ namespace Twitch::irc::message {
 					get_mod(match.str(mod)),
 					match.str(room_id),
 					get_subscriber(match.str(subscriber)),
-					get_tmi_sent_ts(match.str(tmi_sent_ts)),
+					get_ts(match.str(tmi_sent_ts)),
 					get_turbo(match.str(turbo)),
 					match.str(user_id),
-					get_user_type(match.str(user_type))
+					UserType::from_string(match.str(user_type))
 				};
 			}
 
-			inline bool PRIVMSG::is_bitsmsg() const noexcept {
-				return bits != 0;
-			}
-
 			PRIVMSG::PRIVMSG(
-				message::Plain_message&&      t_plain,
+				message::PRIVMSG&& t_plain,
 				std::map<Badge, BadgeLevel>&& t_badge,
 				unsigned int  t_bits,
 				std::string&& t_color,
@@ -368,14 +466,14 @@ namespace Twitch::irc::message {
 				bool          t_mod,
 				std::string&& t_room_id,
 				bool          t_subscriber,
-				std::time_t&& t_tmi_sent_ts,
+				std::chrono::seconds t_tmi_sent_ts,
 				bool          t_turbo,
 				std::string&& t_user_id,
-				UserType      t_user_type
+				UserType t_user_type
 			) :
-				message::Plain_message{ std::move(t_plain) },
-				bits(t_bits),
+				message::PRIVMSG{ std::move(t_plain) },
 				badges(std::move(t_badge)),
+				bits(t_bits),
 				color(std::move(t_color)),
 				display_name(std::move(t_display_name)),
 				emotes(std::move(t_emotes)),
@@ -383,74 +481,122 @@ namespace Twitch::irc::message {
 				mod(t_mod),
 				room_id(std::move(t_room_id)),
 				subscriber(t_subscriber),
-				tmi_sent_ts(std::move(t_tmi_sent_ts)),
+				tmi_sent_ts(t_tmi_sent_ts),
 				turbo(t_turbo),
 				user_id(std::move(t_user_id)),
-				user_type(std::move(t_user_type))
+				user_type(t_user_type)
 			{
 			}
 
+			bool operator==(const PRIVMSG& lhs, const PRIVMSG& rhs) {
+				return lhs.id           == rhs.id
+					&& lhs.tmi_sent_ts  == rhs.tmi_sent_ts
+					&& lhs.user_id      == rhs.user_id
+					&& lhs.badges       == rhs.badges
+					&& lhs.bits         == rhs.bits
+					&& lhs.color        == rhs.color
+					&& lhs.display_name == rhs.display_name
+					&& lhs.emotes       == rhs.emotes
+					&& lhs.mod          == rhs.mod
+					&& lhs.room_id      == rhs.room_id
+					&& lhs.subscriber   == rhs.subscriber
+					&& lhs.turbo        == rhs.turbo
+					&& lhs.user_type    == rhs.user_type
+
+					&& static_cast<message::PRIVMSG>(lhs)
+						== static_cast<message::PRIVMSG>(rhs);
+			}
+
+			bool operator!=(const PRIVMSG& lhs, const PRIVMSG& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex ROOMSTATE::regex{
-				R"(@(?:broadcaster-lang=([^;]*);?)?(?:r9k=([01]);?)?(?:slow=([0-9]+);?)?)"
-				R"((?:subs-only=([01]))? :tmi.twitch.tv ROOMSTATE (#.+)[\r\n|\r|\n]?)"
+				"@(?:broadcaster-lang=([^; ]*);)?(?:emote-only=([01]);)?"
+				"(?:followers-only=([0-9]+|-1);)?(?:r9k=([01]);)?"
+				"(?:rituals=([^; ]+);)?room-id=([^; ]+);?"
+				"(?:slow=([0-9]+);?)?(?:subs-only=([01]))?"
+				" :tmi.twitch.tv ROOMSTATE (#.+)[\r\n|\r|\n]?"
 			};
 			std::optional<ROOMSTATE> ROOMSTATE::is(std::string_view raw_message) {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
 				constexpr const size_t broadcaster_lang = 1;
-				constexpr const size_t r9k = 2;
-				constexpr const size_t slow = 3;
-				constexpr const size_t subs_only = 4;
-				constexpr const size_t channel = 5;
-
-				const auto get_lang = [&](const std::string str) -> std::optional<const std::string>
-				{
-					if (str.size() == 0)
-						return std::nullopt;
-
-					return str;
-				};
-				const auto get_flag = [&](const std::string str) -> std::optional<const bool>
-				{
-					if (str.size() == 0)
-						return std::nullopt;
-
-					return str[0] == '1';
-				};
-				const auto get_slow = [&](const std::string str) -> std::optional<const std::time_t>
-				{
-					if (str.size() == 0)
-						return std::nullopt;
-
-					std::stringstream stream;
-					std::time_t time{};
-					stream >> time;
-					return time;
-				};
+				constexpr const size_t emote_only       = 2;
+				constexpr const size_t followers_only   = 3;
+				constexpr const size_t r9k              = 4;
+				constexpr const size_t rituals          = 5;
+				constexpr const size_t room_id          = 6;
+				constexpr const size_t slow             = 7;
+				constexpr const size_t subs_only        = 8;
+				constexpr const size_t channel          = 9;
 
 				return ROOMSTATE{
 					cap::commands::ROOMSTATE{ match.str(channel) },
-					get_lang(match.str(broadcaster_lang)),
-					get_flag(match.str(r9k)),
-					get_slow(match.str(slow)),
-					get_flag(match.str(subs_only))
+					get_optional<std::string>(match.str(broadcaster_lang)),
+					get_optional<bool>(match.str(emote_only)),
+					get_optional<int>(match.str(followers_only)),
+					get_optional<bool>(match.str(r9k)),
+					get_optional<std::string>(match.str(rituals)),
+					match.str(room_id),
+					get_optional<std::chrono::seconds>(match.str(slow)),
+					get_optional<bool>(match.str(subs_only))
 				};
 			}
 
 			ROOMSTATE::ROOMSTATE(
-				cap::commands::ROOMSTATE&& t_roomstate,
-				std::optional<const std::string>&& t_lang,
-				std::optional<const bool>&&        t_r9k,
-				std::optional<const std::time_t>&& t_slow,
-				std::optional<const bool>&&        t_subs_only
+				cap::commands::ROOMSTATE&&   t_roomstate,
+				std::optional<std::string>&& t_lang,
+				std::optional<bool>          t_emote_only,
+				std::optional<int>           t_followers_only,
+				std::optional<bool>          t_r9k,
+				std::optional<std::string>&& t_rituals,
+				std::string&&                t_room_id,
+				std::optional<std::chrono::seconds> t_slow,
+				std::optional<bool>          t_subs_only
 			) :
 				cap::commands::ROOMSTATE{ t_roomstate },
 				broadcaster_lang(std::move(t_lang)),
-				r9k(std::move(t_r9k)),
-				slow(std::move(t_slow)),
-				subs_only(std::move(t_subs_only))
+				emote_only(t_emote_only),
+				followers_only(t_followers_only),
+				r9k(t_r9k),
+				rituals(t_rituals),
+				room_id(t_room_id),
+				slow(t_slow),
+				subs_only(t_subs_only)
 			{
+			}
+
+			bool operator==(const ROOMSTATE& lhs, const ROOMSTATE& rhs) {
+				return lhs.broadcaster_lang == rhs.broadcaster_lang
+					&& lhs.emote_only == rhs.emote_only
+					&& lhs.followers_only == rhs.followers_only
+					&& lhs.r9k == rhs.r9k
+					&& lhs.rituals == rhs.rituals
+					&& lhs.room_id == rhs.room_id
+					&& lhs.slow == rhs.slow
+					&& lhs.subs_only == rhs.subs_only
+
+					&& static_cast<commands::ROOMSTATE>(lhs)
+						== static_cast<commands::ROOMSTATE>(rhs);
+						
+			}
+
+			bool operator!=(const ROOMSTATE& lhs, const ROOMSTATE& rhs) {
+				return !(lhs == rhs);
+			}
+
+			std::string USERNOTICE::ParseError::what() const noexcept {
+				return err;
+			}
+
+			bool operator==(const USERNOTICE::ParseError& lhs, const USERNOTICE::ParseError& rhs) {
+				return lhs.err == rhs.err;
+			}
+
+			bool operator!=(const USERNOTICE::ParseError& lhs, const USERNOTICE::ParseError& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex USERNOTICE::Sub::regex{
@@ -460,15 +606,25 @@ namespace Twitch::irc::message {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const std::size_t msg_param_months = 1;
-				constexpr const std::size_t msg_param_sub_plan = 2;
-				constexpr const std::size_t msg_param_sub_plan_name = 3;
+				constexpr const std::size_t months        = 1;
+				constexpr const std::size_t sub_plan      = 2;
+				constexpr const std::size_t sub_plan_name = 3;
 
 				return Sub{
-					std::atoi(match.str(msg_param_months).c_str()),
-					match.str(msg_param_sub_plan),
-					boost::replace_all_copy(match.str(msg_param_sub_plan_name), R"(\s)", " ")
+					std::atoi(match.str(months).c_str()),
+					match.str(sub_plan),
+					boost::replace_all_copy(match.str(sub_plan_name), R"(\s)", " ")
 				};
+			}
+
+			bool operator==(const USERNOTICE::Sub& lhs, const USERNOTICE::Sub& rhs) {
+				return lhs.months == rhs.months
+					&& lhs.sub_plan == rhs.sub_plan
+					&& lhs.sub_plan_name == rhs.sub_plan_name;
+			}
+
+			bool operator!=(const USERNOTICE::Sub& lhs, const USERNOTICE::Sub& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex USERNOTICE::Subgift::regex{
@@ -480,21 +636,34 @@ namespace Twitch::irc::message {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t msg_param_months = 1;
-				constexpr const size_t msg_param_recipient_display_name = 2;
-				constexpr const size_t msg_param_recipient_id = 3;
-				constexpr const size_t msg_param_recipient_name = 4;
-				constexpr const size_t msg_param_sub_plan_name = 5;
-				constexpr const size_t msg_param_sub_plan = 6;
+				constexpr const size_t months                 = 1;
+				constexpr const size_t recipient_display_name = 2;
+				constexpr const size_t recipient_id           = 3;
+				constexpr const size_t recipient_name         = 4;
+				constexpr const size_t sub_plan_name          = 5;
+				constexpr const size_t sub_plan               = 6;
 
 				return Subgift{
-					std::atoi(match.str(msg_param_months).c_str()),
-					match.str(msg_param_recipient_display_name),
-					match.str(msg_param_recipient_id),
-					match.str(msg_param_recipient_name),
-					boost::replace_all_copy(match.str(msg_param_sub_plan_name), R"(\s)", " "),
-					match.str(msg_param_sub_plan),
+					std::atoi(match.str(months).c_str()),
+					match.str(recipient_display_name),
+					match.str(recipient_id),
+					match.str(recipient_name),
+					boost::replace_all_copy(match.str(sub_plan_name), R"(\s)", " "),
+					match.str(sub_plan),
 				};
+			}
+
+			bool operator==(const USERNOTICE::Subgift& lhs, const USERNOTICE::Subgift& rhs) {
+				return lhs.months                 == rhs.months
+					&& lhs.recipient_display_name == rhs.recipient_display_name
+					&& lhs.recipient_id           == rhs.recipient_id
+					&& lhs.recipient_name         == rhs.recipient_name
+					&& lhs.sub_plan_name          == rhs.sub_plan_name
+					&& lhs.sub_plan               == rhs.sub_plan;
+			}
+
+			bool operator!=(const USERNOTICE::Subgift& lhs, const USERNOTICE::Subgift& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex USERNOTICE::Raid::regex{
@@ -504,15 +673,25 @@ namespace Twitch::irc::message {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t msg_param_displayName = 1;
-				constexpr const size_t msg_param_login = 2;
-				constexpr const size_t msg_param_viewerCount = 3;
+				constexpr const size_t display_name = 1;
+				constexpr const size_t login        = 2;
+				constexpr const size_t viewer_count = 3;
 
 				return Raid{
-					match.str(msg_param_displayName),
-					match.str(msg_param_login),
-					std::atoi(match.str(msg_param_viewerCount).c_str())
+					match.str(display_name),
+					match.str(login),
+					std::atoi(match.str(viewer_count).c_str())
 				};
+			}
+
+			bool operator==(const USERNOTICE::Raid& lhs, const USERNOTICE::Raid& rhs) {
+				return lhs.display_name == rhs.display_name
+					&& lhs.login        == rhs.login
+					&& lhs.viewer_count == rhs.viewer_count;
+			}
+
+			bool operator!=(const USERNOTICE::Raid& lhs, const USERNOTICE::Raid& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex USERNOTICE::Ritual::regex{
@@ -525,6 +704,14 @@ namespace Twitch::irc::message {
 				return Ritual{};
 			}
 
+			bool operator==(const USERNOTICE::Ritual& lhs, const USERNOTICE::Ritual& rhs) {
+				return true;
+			}
+
+			bool operator!=(const USERNOTICE::Ritual& lhs, const USERNOTICE::Ritual& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex USERNOTICE::regex{
 				R"(@badges=(.*);color=(.*);display-name=(.*);emotes=(.*);)"
 				R"(id=(.+);login=(.+);mod=([01]);(msg-id=.+);room-id=(.+);)"
@@ -535,40 +722,41 @@ namespace Twitch::irc::message {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t badge = 1;
-				constexpr const size_t color = 2;
+				constexpr const size_t badge        = 1;
+				constexpr const size_t color        = 2;
 				constexpr const size_t display_name = 3;
-				constexpr const size_t emotes = 4;
-				constexpr const size_t id = 5;
-				constexpr const size_t login = 6;
-				constexpr const size_t mod = 7;
-				constexpr const size_t msg_id = 8;
-				constexpr const size_t room_id = 9;
-				constexpr const size_t subscriber = 10;
-				constexpr const size_t system_msg = 11;
-				constexpr const size_t tmi_sent_ts = 12;
-				constexpr const size_t turbo = 13;
-				constexpr const size_t user_id = 14;
-				constexpr const size_t user_type = 15;
-				constexpr const size_t channel = 16;
-				constexpr const size_t message = 17;
+				constexpr const size_t emotes       = 4;
+				constexpr const size_t id           = 5;
+				constexpr const size_t login        = 6;
+				constexpr const size_t mod          = 7;
+				constexpr const size_t msg_id       = 8;
+				constexpr const size_t room_id      = 9;
+				constexpr const size_t subscriber   = 10;
+				constexpr const size_t system_msg   = 11;
+				constexpr const size_t tmi_sent_ts  = 12;
+				constexpr const size_t turbo        = 13;
+				constexpr const size_t user_id      = 14;
+				constexpr const size_t user_type    = 15;
+				constexpr const size_t channel      = 16;
+				constexpr const size_t message      = 17;
 
 				auto get_msg_id_details =
-					[&]() -> boost::variant<ParseError, Sub, Subgift, Raid, Ritual>
+					[&]() -> std::remove_const_t<decltype(USERNOTICE::msg_id)>
 				{
 					if (auto parsed = Sub::is(match.str(msg_id)); parsed) {
 						return std::move(*parsed);
 					}
-					else if (auto parsed = Subgift::is(match.str(msg_id)); parsed) {
+					if (auto parsed = Subgift::is(match.str(msg_id)); parsed) {
 						return std::move(*parsed);
 					}
-					else if (auto parsed = Raid::is(match.str(msg_id)); parsed) {
+					if (auto parsed = Raid::is(match.str(msg_id)); parsed) {
 						return std::move(*parsed);
 					}
-					else if (auto parsed = Ritual::is(match.str(msg_id)); parsed) {
-						return std::move(*parsed);
+					if (auto parsed = Ritual::is(match.str(msg_id)); parsed) {
+						return *parsed;
 					}
-					else return ParseError{};
+					
+					return ParseError{};
 				};
 
 				return USERNOTICE{
@@ -584,10 +772,10 @@ namespace Twitch::irc::message {
 					match.str(room_id),
 					match.str(subscriber)[0] == '1',
 					boost::replace_all_copy(match.str(system_msg), R"(\s)", " "),
-					get_tmi_sent_ts(match.str(tmi_sent_ts)),
+					get_ts(match.str(tmi_sent_ts)),
 					match.str(turbo)[0] == '1',
 					match.str(user_id),
-					get_user_type(match.str(user_type))
+					UserType::from_string(match.str(user_type))
 				};
 			}
 
@@ -604,10 +792,10 @@ namespace Twitch::irc::message {
 				std::string&& t_room_id,
 				bool          t_subscriber,
 				std::string&& t_system_msg,
-				std::time_t&& t_tmi_sent_ts,
+				std::chrono::seconds t_tmi_sent_ts,
 				bool          t_turbo,
 				std::string&& t_user_id,
-				UserType      t_user_type
+				UserType t_user_type
 			) :
 				cap::commands::USERNOTICE{ std::move(t_usernotice) },
 				badges(std::move(t_badges)),
@@ -621,63 +809,108 @@ namespace Twitch::irc::message {
 				room_id(std::move(t_room_id)),
 				subscriber(t_subscriber),
 				system_msg(std::move(t_system_msg)),
-				tmi_sent_ts(std::move(t_tmi_sent_ts)),
+				tmi_sent_ts(t_tmi_sent_ts),
 				turbo(t_turbo),
 				user_id(std::move(t_user_id)),
 				user_type(t_user_type)
 			{
 			}
 
+			bool operator==(const USERNOTICE& lhs, const USERNOTICE& rhs) {
+				return lhs.id           == rhs.id
+					&& lhs.tmi_sent_ts  == rhs.tmi_sent_ts
+					&& lhs.user_id      == rhs.user_id
+					&& lhs.login        == rhs.login
+					&& lhs.badges       == rhs.badges
+					&& lhs.color        == rhs.color
+					&& lhs.display_name == rhs.display_name
+					&& lhs.emotes       == rhs.emotes
+					&& lhs.mod          == rhs.mod
+					&& lhs.msg_id       == rhs.msg_id
+					&& lhs.room_id      == rhs.room_id
+					&& lhs.subscriber   == rhs.subscriber
+					&& lhs.system_msg   == rhs.system_msg
+					&& lhs.turbo        == rhs.turbo
+					&& lhs.user_type    == rhs.user_type
+
+					&& static_cast<commands::USERNOTICE>(lhs)
+						== static_cast<commands::USERNOTICE>(rhs);
+			}
+
+			bool operator!=(const USERNOTICE& lhs, const USERNOTICE& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex USERSTATE::regex{
-				R"(@color=(.*);display-name=(.*);emote-sets=(.*);)"
-				R"(mod=([01]);subscriber=([01]);turbo=([01]);user-type=(.*))"
-				R"( :tmi.twitch.tv USERSTATE (#.+)[\r\n|\r|\n]?)"
+				"@badges=([^; ]*);color=([^; ]*);display-name=([^; ]*);"
+				"emote-sets=([^; ]*);mod=([01]);subscriber=([01]);"
+				"user-type=([^; ]*)"
+				" :tmi.twitch.tv USERSTATE (#.+)[\r\n|\r|\n]?"
 			};
 			std::optional<USERSTATE> USERSTATE::is(std::string_view raw_message) {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
-				constexpr const size_t color = 1;
-				constexpr const size_t display_name = 2;
-				constexpr const size_t emote_sets = 3;
-				constexpr const size_t mod = 4;
-				constexpr const size_t subscriber = 5;
-				constexpr const size_t turbo = 6;
-				constexpr const size_t user_type = 7;
-				constexpr const size_t channel = 8;
+				constexpr const size_t badges       = 1;
+				constexpr const size_t color        = 2;
+				constexpr const size_t display_name = 3;
+				constexpr const size_t emote_sets   = 4;
+				constexpr const size_t mod          = 5;
+				constexpr const size_t subscriber   = 6;
+				constexpr const size_t user_type    = 7;
+				constexpr const size_t channel      = 8;
 
+				using namespace std::string_literals;
 				return USERSTATE{
 					cap::commands::USERSTATE{ match.str(channel) },
+					get_badges(match.str(badges)),
 					match.str(color),
 					match.str(display_name),
 					match.str(emote_sets),
-					match.str(mod)[0] == '1',
-					match.str(subscriber)[0] == '1',
-					match.str(turbo)[0] == '1',
-					get_user_type(match.str(user_type))
+					match.str(mod) == "1"s,
+					match.str(subscriber) == "1"s,
+					UserType::from_string(match.str(user_type))
 				};
 			}
 
 			USERSTATE::USERSTATE(
 				cap::commands::USERSTATE&& t_userstate,
+				std::map<Badge, BadgeLevel>&& t_badges,
 				std::string&& t_color,
 				std::string&& t_display_name,
 				std::string&& t_emote_sets,
 				bool          t_mod,
 				bool          t_subscriber,
-				bool          t_turbo,
-				UserType      t_user_type
+				UserType t_user_type
 			) :
 				cap::commands::USERSTATE{ std::move(t_userstate) },
+				badges(std::move(t_badges)),
 				color(std::move(t_color)),
 				display_name(std::move(t_display_name)),
 				emote_sets(std::move(t_emote_sets)),
 				mod(t_mod),
 				subscriber(t_subscriber),
-				turbo(t_turbo),
 				user_type(t_user_type)
 			{
 			}
+
+			bool operator==(const USERSTATE& lhs, const USERSTATE& rhs) {
+				return lhs.badges == rhs.badges
+					&& lhs.color == rhs.color
+					&& lhs.display_name == rhs.display_name
+					&& lhs.emote_sets == rhs.emote_sets
+					&& lhs.mod == rhs.mod
+					&& lhs.subscriber == rhs.subscriber
+					&& lhs.user_type == rhs.user_type
+
+					&& static_cast<commands::USERSTATE>(lhs)
+						== static_cast<commands::USERSTATE>(rhs);
+			}
+
+			bool operator!=(const USERSTATE& lhs, const USERSTATE& rhs) {
+				return !(lhs == rhs);
+			}
+
 		}
 		namespace commands {
 			const std::regex CLEARCHAT::regex{
@@ -696,6 +929,15 @@ namespace Twitch::irc::message {
 				};
 			}
 
+			bool operator==(const CLEARCHAT& lhs, const CLEARCHAT& rhs) {
+				return lhs.channel == rhs.channel
+					&& lhs.user    == rhs.user;
+			}
+
+			bool operator!=(const CLEARCHAT& lhs, const CLEARCHAT& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex HOSTTARGET::regex{
 				R"(:tmi.twitch.tv HOSTTARGET (#.+) ([^ ]+|:-) (?:\[([0-9]*)\])?[\r\n|\r|\n]?)"
 			};
@@ -710,8 +952,18 @@ namespace Twitch::irc::message {
 				return HOSTTARGET{
 					match.str(hosting_channel),
 					match.str(target_channel),
-					std::atoi(match.str(viewers_count).c_str())
+					get_optional<int>(match.str(viewers_count))
 				};
+			}
+
+			bool operator==(const HOSTTARGET& lhs, const HOSTTARGET& rhs) {
+				return lhs.hosting_channel == rhs.hosting_channel
+					&& lhs.target_channel  == rhs.target_channel
+					&& lhs.viewers_count   == rhs.viewers_count;
+			}
+
+			bool operator!=(const HOSTTARGET& lhs, const HOSTTARGET& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex NOTICE::regex{
@@ -722,12 +974,24 @@ namespace Twitch::irc::message {
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
 				constexpr const std::size_t msg_id  = 1;
-				constexpr const std::size_t message = 2;
+				constexpr const std::size_t channel = 2;
+				constexpr const std::size_t message = 3;
 
 				return NOTICE{
 					match.str(msg_id),
-					match.str(message),
+					match.str(channel),
+					match.str(message)
 				};
+			}
+
+			bool operator==(const NOTICE& lhs, const NOTICE& rhs) {
+				return lhs.msg_id  == rhs.msg_id
+					&& lhs.channel == rhs.channel
+					&& lhs.message == rhs.message;
+			}
+
+			bool operator!=(const NOTICE& lhs, const NOTICE& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex RECONNECT::regex{
@@ -738,6 +1002,14 @@ namespace Twitch::irc::message {
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
 
 				return RECONNECT{};
+			}
+
+			bool operator==(const RECONNECT& lhs, const RECONNECT& rhs) {
+				return true;
+			}
+
+			bool operator!=(const RECONNECT& lhs, const RECONNECT& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex ROOMSTATE::regex{
@@ -752,6 +1024,14 @@ namespace Twitch::irc::message {
 				return ROOMSTATE{
 					match.str(channel)
 				};
+			}
+			
+			bool operator==(const ROOMSTATE& lhs, const ROOMSTATE& rhs) {
+				return lhs.channel == rhs.channel;
+			}
+
+			bool operator!=(const ROOMSTATE& lhs, const ROOMSTATE& rhs) {
+				return !(lhs == rhs);
 			}
 
 			const std::regex USERNOTICE::regex{
@@ -770,6 +1050,15 @@ namespace Twitch::irc::message {
 				};
 			}
 
+			bool operator==(const USERNOTICE& lhs, const USERNOTICE& rhs) {
+				return lhs.channel == rhs.channel
+					&& lhs.message == rhs.message;
+			}
+
+			bool operator!=(const USERNOTICE& lhs, const USERNOTICE& rhs) {
+				return !(lhs == rhs);
+			}
+
 			const std::regex USERSTATE::regex{
 				R"(:tmi.twitch.tv USERSTATE (#.+)[\r\n|\r|\n]?)"
 			};
@@ -783,122 +1072,73 @@ namespace Twitch::irc::message {
 					match.str(channel)
 				};
 			}
-		}
-	}
-	namespace MessageParserHelpers {
-		using cap::tags::PRIVMSG;
-		//using cap::tags::BITSMSG;
-		std::optional<PING> is_ping_message(std::string_view raw_message) {
-			std::cmatch match;
 
-			static const std::regex ping_regex{
-				R"(PING :(.+)[\r\n|\r|\n]?)"
-			};
-			if (!std::regex_match(raw_message.data(), match, ping_regex)) { return std::nullopt; }
+			bool operator==(const USERSTATE& lhs, const USERSTATE& rhs) {
+				return lhs.channel == rhs.channel;
+			}
 
-			constexpr const size_t host = 1;
+			bool operator!=(const USERSTATE& lhs, const USERSTATE& rhs) {
+				return !(lhs == rhs);
+			}
 
-			return PING{
-				match.str(host)
-			};
-		}
-
-		std::optional<PRIVMSG> is_privmsg_message(std::string_view raw_message) {
-			std::cmatch match;
-
-			static const std::regex privmsg_regex{
-				R"(@badges=([^;]*);color=([^;]*);display-name=([^;]*);emotes=([^;]*);id=([^;]+);mod=([01]);room-id=([0-9]+);)"
-				R"(subscriber=([01]);tmi-sent-ts=([0-9]+);turbo=([01]);user-id=([0-9]+);user-type=([^ ]*))"
-				R"( :(.+)!(.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?)"
-			};
-			if (!std::regex_match(raw_message.data(), match, privmsg_regex)) { return std::nullopt; }
-
-			constexpr const size_t badges       = 1;
-			constexpr const size_t color        = 2;
-			constexpr const size_t display_name = 3;
-			constexpr const size_t emotes       = 4;
-			constexpr const size_t id           = 5;
-			constexpr const size_t mod          = 6;
-			constexpr const size_t room_id      = 7;
-			constexpr const size_t subscriber   = 8;
-			constexpr const size_t tmi_sent_ts  = 9;
-			constexpr const size_t turbo        = 10;
-			constexpr const size_t user_id      = 11;
-			constexpr const size_t user_type    = 12;
-			constexpr const size_t nick         = 13;
-			constexpr const size_t user         = 14;
-			constexpr const size_t host         = 15;
-			constexpr const size_t target       = 16;
-			constexpr const size_t message      = 17;
-
-			return {};/*PRIVMSG{
-				PRIVMSG::Tags{
-					get_badges(match.str(badges)),
-					match.str(color),
-					match.str(display_name),
-					match.str(emotes),
-					match.str(id),
-					get_mod(match.str(mod)),
-					match.str(room_id),
-					get_subscriber(match.str(subscriber)),
-					get_tmi_sent_ts(match.str(tmi_sent_ts)),
-					get_turbo(match.str(turbo)),
-					match.str(user_id),
-					get_user_type(match.str(user_type))
-				},
-				Plain_message{
-					std::move(match.str(nick)),
-					std::move(match.str(user)),
-					std::move(match.str(host)),
-					std::move(match.str(target)),
-					std::move(match.str(message))
-				}
-			}*/
-		}
-
-		std::optional<Plain_message> is_plain_privmsg_message(std::string_view raw_message) {
-			std::cmatch match;
-
-			static const std::regex plain_message_regex{
-				R"(:(.+)!(.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?)"
-			};
-			if (!std::regex_match(raw_message.data(), match, plain_message_regex)) { return std::nullopt; }
-
-			constexpr const size_t nick = 1;
-			constexpr const size_t user = 2;
-			constexpr const size_t host = 3;
-			constexpr const size_t target = 4;
-			constexpr const size_t message = 5;
-
-			return Plain_message{
-				std::move(match.str(nick)),
-				std::move(match.str(user)),
-				std::move(match.str(host)),
-				std::move(match.str(target)),
-				std::move(match.str(message))
-			};
-		}
-	}
+		} // namespace commands
+	} // namespace cap
 
 	MessageParser::result_t MessageParser::process(std::string_view recived_message) {
-		using namespace std::string_literals;
 		try
 		{
-			//using MessageParserHelpers::is_bits_message;
-			using MessageParserHelpers::is_ping_message;
-			using MessageParserHelpers::is_plain_privmsg_message;
-			using MessageParserHelpers::is_privmsg_message;
+			namespace commands   = Twitch::irc::message::cap::commands;
+			namespace membership = Twitch::irc::message::cap::membership;
+			namespace tags       = Twitch::irc::message::cap::tags;
+			// TODO: simplify, iterate through types
+			// sorted by priority
+			if (auto parsed = PING::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = tags::PRIVMSG::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = membership::JOIN::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = membership::PART::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = tags::CLEARCHAT::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = tags::USERNOTICE::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = commands::NOTICE::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = tags::USERSTATE::is(recived_message); parsed) {
+				return *parsed;
+			}
 
-			if (auto parsed = is_ping_message(recived_message); parsed) {
+			// only once or very rarely
+			if (auto parsed = membership::MODE::is(recived_message); parsed) {
 				return *parsed;
 			}
-			// cap tags
-			if (auto parsed = is_privmsg_message(recived_message); parsed) {
+			if (auto parsed = commands::HOSTTARGET::is(recived_message); parsed) {
 				return *parsed;
 			}
-			/*if (auto parsed = is_bits_message(recived_message); parsed) {
+			if (auto parsed = tags::GLOBALUSERSTATE::is(recived_message); parsed) {
 				return *parsed;
-			}*/
+			}
+			if (auto parsed = tags::ROOMSTATE::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = membership::NAMES::is(recived_message); parsed) {
+				return *parsed;
+			}
+			if (auto parsed = commands::RECONNECT::is(recived_message); parsed) {
+				return *parsed;
+			}
+
+			using namespace std::string_literals;
+			return ParseError{ "Message type not handled: "s + recived_message.data() };
 		}
 		catch (const std::regex_error& e) {
 			return ParseError{ e.what() };
@@ -907,114 +1147,13 @@ namespace Twitch::irc::message {
 			return ParseError{ e.what() };
 		}
 		catch (...) {
+			using namespace std::string_literals;
 			return ParseError{ "Unknown exception"s };
 		}
-
-		return ParseError{ "Message type not handled: "s + recived_message.data() };
 	}
 
-	MessageParser::MessageParser(std::shared_ptr<IRCWriter> irc_writer)
-		: m_writer(irc_writer)
+	MessageParser::MessageParser(std::shared_ptr<IController> irc_controller)
+		: m_controller(std::move(irc_controller))
 	{
 	}
 }
-
-namespace message    = Twitch::irc::message;
-namespace membership = message::cap::membership;
-namespace tags       = message::cap::tags;
-namespace commands   = message::cap::commands;
-
-std::ostream& operator<<(std::ostream& stream, const tags::Badge& badge) {
-	if      (badge == tags::Badge::subscriber)  { return stream << "subscriber"; }
-	else if (badge == tags::Badge::bits)        { return stream << "bits"; }
-	else if (badge == tags::Badge::turbo)       { return stream << "turbo"; }
-	else if (badge == tags::Badge::moderator)   { return stream << "moderator"; }
-	else if (badge == tags::Badge::broadcaster) { return stream << "broadcaster"; }
-	else if (badge == tags::Badge::global_mod)  { return stream << "global_mod"; }
-	else if (badge == tags::Badge::admin)       { return stream << "admin"; }
-	else if (badge == tags::Badge::staff)       { return stream << "staff"; }
-	else
-		return stream << "unhandled_badge";
-}
-
-std::ostream& operator<<(std::ostream& stream, const message::PING& ping) {
-	return stream << "\nPING :" << ping.host << '\n';
-}
-
-std::ostream& operator<<(std::ostream& stream, const message::Plain_message& plainmsg) {
-	return stream << ':'
-		<< plainmsg.nick << '!'
-		<< plainmsg.user << '@'
-		<< plainmsg.host
-		<< plainmsg.target << " :"
-		<< plainmsg.message
-		<< '\n';
-}
-
-std::ostream& operator<<(std::ostream& stream, const tags::PRIVMSG& privmsg) {
-	return stream << "@badges=";
-	for (auto const& [badge, level] : privmsg.badges) {
-		stream << badge << '/' << level;
-	}
-	stream << ";color=" << privmsg.color;
-	if (privmsg.is_bitsmsg()) {
-		stream << ";bits=" << privmsg.bits;
-	}
-	stream
-		<< ";display-name=" << privmsg.display_name
-		<< ";emotes="       << privmsg.emotes
-		<< ";id="           << privmsg.id
-		<< ";mod="          << privmsg.mod
-		<< ";room-id="      << privmsg.room_id
-		<< ";subscriber="   << privmsg.subscriber
-		<< ";tmi-sent-ts="  << privmsg.tmi_sent_ts
-		<< ";turbo="        << privmsg.turbo
-		<< ";user-id="      << privmsg.user_id
-		<< ";user-type="    << user_type_to_string(privmsg.user_type) << ' '
-		<< static_cast<message::Plain_message>(privmsg);
-}
-
-//std::ostream& operator<<(std::ostream& stream, const tags::BITSMSG& bits) {
-//	return stream
-//		<< bits.tags << ' '
-//		<< bits.plain;
-//}
-
-//std::ostream& operator<<(std::ostream& stream, const tags::PRIVMSG::Tags& tags) {
-//	stream << "@badges=";
-//	for (auto const& [badge, level] : tags.badges) {
-//		stream << badge << '/' << level;
-//	}
-//	return stream
-//		<< ";color=" << tags.color
-//		<< ";display-name=" << tags.display_name
-//		<< ";emotes=" << tags.emotes
-//		<< ";id=" << tags.id
-//		<< ";mod=" << tags.mod
-//		<< ";room-id=" << tags.room_id
-//		<< ";subscriber=" << tags.subscriber
-//		<< ";tmi-sent-ts=" << tags.tmi_sent_ts
-//		<< ";turbo=" << tags.turbo
-//		<< ";user-id=" << tags.user_id
-//		<< ";user-type=" << user_type_to_string(tags.user_type);
-//}
-
-//std::ostream& operator<<(std::ostream& stream, const tags::BITSMSG::Tags& tags) {
-//	stream << "@badges=";
-//	for (auto const&[badge, level] : tags.badges) {
-//		stream << badge << '/' << level;
-//	}
-//	return stream
-//		<< ";bits=" << tags.bits
-//		<< ";color=" << tags.color
-//		<< ";display-name=" << tags.display_name
-//		<< ";emotes=" << tags.emotes
-//		<< ";id=" << tags.id
-//		<< ";mod=" << tags.mod
-//		<< ";room-id=" << tags.room_id
-//		<< ";subscriber=" << tags.subscriber
-//		<< ";tmi-sent-ts=" << tags.tmi_sent_ts
-//		<< ";turbo=" << tags.turbo
-//		<< ";user-id=" << tags.user_id
-//		<< ";user-type=" << user_type_to_string(tags.user_type);
-//}

@@ -20,18 +20,26 @@ namespace {
 	};
 }
 /// All copied from official doc page https://dev.twitch.tv/docs/irc
+/// Twitch doc is incorrect in few examples,
+/// msgN = copied from doc
+/// rweN = real world example
 namespace doc {
 	using namespace std::string_literals;
+	
+	using Twitch::irc::message::PING;
+	using Twitch::irc::message::PRIVMSG;
+
 	std::string ping{
 		"PING :tmi.twitch.tv"s
 	};
-	std::string plainmsg{ // from privmsg
+	std::string privmsg{
 		":ronni!ronni@ronni.tmi.twitch.tv PRIVMSG #dallas :Kappa Keepo Kappa"s
 	};
-
 	namespace cap {
 		namespace membership {
 			namespace join {
+				using Twitch::irc::message::cap::membership::JOIN;
+
 				const std::string msg1{
 					":ronni!ronni@ronni.tmi.twitch.tv JOIN #dallas"s
 				};
@@ -41,6 +49,8 @@ namespace doc {
 				};
 			}
 			namespace mode {
+				using Twitch::irc::message::cap::membership::MODE;
+
 				const std::string msg1{
 					":jtv MODE #dallas +o ronni"s
 				};
@@ -53,6 +63,8 @@ namespace doc {
 				};
 			}
 			namespace names {
+				using Twitch::irc::message::cap::membership::NAMES;
+
 				const std::string msg1{
 					":ronni.tmi.twitch.tv 353 ronni = #dallas : ronni fred wilma"s
 				};
@@ -68,6 +80,8 @@ namespace doc {
 				};
 			}
 			namespace part {
+				using Twitch::irc::message::cap::membership::PART;
+
 				const std::string msg1{
 					":ronni!ronni@ronni.tmi.twitch.tv PART #dallas"s
 				};
@@ -79,26 +93,55 @@ namespace doc {
 		}
 		namespace tags {
 			namespace clearchat {
-				const std::string msg1{
-					R"(@ban-reason=Follow\sthe\srules :tmi.twitch.tv CLEARCHAT #dallas :ronni)"s
+				using Twitch::irc::message::cap::tags::CLEARCHAT;
+
+				using Twitch::irc::message::cap::tags::CLEARCHAT;
+				// doc is incorrect: missing parameters
+				//const std::string msg1{
+				//	R"(@ban-reason=Follow\sthe\srules)"
+				//	" :tmi.twitch.tv CLEARCHAT #dallas :ronni"s
+				//};
+
+				const std::string rwe1{
+					"@ban-duration=600;room-id=99999999;"
+					"target-user-id=99999999;tmi-sent-ts=1524962471755"
+					" :tmi.twitch.tv CLEARCHAT #channel :nick"s
+				};
+
+				const std::string rwe2{
+					"@ban-duration=1;ban-reason=test;room-id=99999999;"
+					"target-user-id=99999999;tmi-sent-ts=1525028799009"
+					" :tmi.twitch.tv CLEARCHAT #channel :nick"s
 				};
 
 				const std::vector<const std::string*> all_cases{
-					&msg1
+					&rwe1, &rwe2
 				};
 			}
 			namespace globaluserstate {
-				const std::string msg1{
-					"@color=#0D4200;display-name=dallas;"
-					"emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;"
-					"turbo=0;user-id=1337;user-type=admin :tmi.twitch.tv GLOBALUSERSTATE"s
+				using Twitch::irc::message::cap::tags::GLOBALUSERSTATE;
+
+				// doc is incorrect: missing parameters,
+				//                   additional parameters not present in real message
+				//const std::string msg1{
+				//	"@color=#0D4200;display-name=dallas;"
+				//	"emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;"
+				//	"turbo=0;user-id=1337;user-type=admin :tmi.twitch.tv GLOBALUSERSTATE"s
+				//};
+
+				const std::string rwe1{
+					"@badges=;color=#0000FF;display-name=Name;"
+					"emote-sets=0,33563;user-id=99999999;user-type="
+					" :tmi.twitch.tv GLOBALUSERSTATE"s
 				};
 
 				const std::vector<const std::string*> all_cases{
-					&msg1
+					&rwe1
 				};
 			}
 			namespace privmsg {
+				using Twitch::irc::message::cap::tags::PRIVMSG;
+
 				const std::string msg1{
 					"@badges=global_mod/1,turbo/1;color=#0D4200;"
 					"display-name=dallas;emotes=25:0-4,12-16/1902:6-10;"
@@ -120,19 +163,45 @@ namespace doc {
 				};
 			}
 			namespace roomstate {
-				const std::string msg1{
-					"@broadcaster-lang=en;r9k=0;slow=0;subs-only=0"
-					" :tmi.twitch.tv ROOMSTATE #dallas"s
+				using Twitch::irc::message::cap::tags::ROOMSTATE;
+
+				// doc is incorrect: missing parameters
+				//const std::string msg1{
+				//	"@broadcaster-lang=en;r9k=0;slow=0;subs-only=0"
+				//	" :tmi.twitch.tv ROOMSTATE #dallas"s
+				//};
+				// doc is (again...) incorrect
+				//const std::string msg2{ // change of state
+				//	"@slow=10 :tmi.twitch.tv ROOMSTATE #dallas"s
+				//};
+
+				const std::string rwe1{
+					"@broadcaster-lang=;emote-only=0;followers-only=-1;"
+					"r9k=0;rituals=0;room-id=99999999;slow=0;subs-only=0"
+					" :tmi.twitch.tv ROOMSTATE #channel"s
 				};
-				const std::string msg2{ // change of state
-					"@slow=10 :tmi.twitch.tv ROOMSTATE #dallas"s
+				const std::string rwe2{
+					"@room-id=99999999;slow=10 :tmi.twitch.tv ROOMSTATE #channel"s
+				};
+				const std::string rwe3{
+					"@room-id=99999999;slow=0 :tmi.twitch.tv ROOMSTATE #channel"s
+				};
+				const std::string rwe4{
+					"@followers-only=30;room-id=99999999"
+					" :tmi.twitch.tv ROOMSTATE #channel"s
+				};
+				const std::string rwe5{
+					"@followers-only=-1;room-id=99999999"
+					" :tmi.twitch.tv ROOMSTATE #channel"s
 				};
 
 				const std::vector<const std::string*> all_cases{
-					&msg1, &msg2
+					&rwe1, &rwe2, &rwe3, &rwe4, &rwe5
 				};
 			}
 			namespace usernotice {
+				using Twitch::irc::message::cap::tags::USERNOTICE;
+
 				const std::string msg1{ // resub
 					"@badges=staff/1,broadcaster/1,turbo/1;color=#008000;display-name=ronni;"
 					"emotes=;id=db25007f-7a18-43eb-9379-80131e44d633;login=ronni;"
@@ -177,20 +246,32 @@ namespace doc {
 				};
 			}
 			namespace userstate {
-				const std::string msg1{
-					"@color=#0D4200;display-name=ronni;"
-					"emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;"
-					"mod=1;subscriber=1;turbo=1;user-type=staff"
-					" :tmi.twitch.tv USERSTATE #dallas"s
+				using Twitch::irc::message::cap::tags::USERSTATE;
+
+				// doc is incorrect: missing parameters
+				//const std::string msg1{
+				//	"@color=#0D4200;display-name=ronni;"
+				//	"emote-sets=0,33,50,237,793,2126,3517,4578,5569,9400,10337,12239;"
+				//	"mod=1;subscriber=1;turbo=1;user-type=staff"
+				//	" :tmi.twitch.tv USERSTATE #dallas"s
+				//};
+
+				const std::string rwe1{
+					"@badges=broadcaster/1;color=#0000FF;"
+					"display-name=Nick;emote-sets=0,33563;"
+					"mod=0;subscriber=0;user-type="
+					" :tmi.twitch.tv USERSTATE #channel"s
 				};
 
 				const std::vector<const std::string*> all_cases{
-					&msg1
+					&rwe1
 				};
 			}
 		}
 		namespace commands {
 			namespace clearchat {
+				using Twitch::irc::message::cap::commands::CLEARCHAT;
+
 				const std::string msg1{
 					":tmi.twitch.tv CLEARCHAT #dallas"s
 				};
@@ -203,6 +284,8 @@ namespace doc {
 				};
 			}
 			namespace hosttarget {
+				using Twitch::irc::message::cap::commands::HOSTTARGET;
+
 				const std::string msg1{
 					":tmi.twitch.tv HOSTTARGET #hosting_channel <channel> [0]"s
 				};
@@ -215,6 +298,8 @@ namespace doc {
 				};
 			}
 			namespace notice {
+				using Twitch::irc::message::cap::commands::NOTICE;
+
 				const std::string msg1{
 					"@msg-id=slow_off :tmi.twitch.tv NOTICE"
 					" #dallas :This room is no longer in slow mode."s
@@ -225,6 +310,8 @@ namespace doc {
 				};
 			}
 			namespace reconnect {
+				using Twitch::irc::message::cap::commands::RECONNECT;
+
 				const std::string msg1{
 					"RECONNECT"s
 				};
@@ -234,6 +321,8 @@ namespace doc {
 				};
 			}
 			namespace roomstate {
+				using Twitch::irc::message::cap::commands::ROOMSTATE;
+
 				const std::string msg1{
 					":tmi.twitch.tv ROOMSTATE #<channel>"s
 				};
@@ -243,6 +332,8 @@ namespace doc {
 				};
 			}
 			namespace usernotice {
+				using Twitch::irc::message::cap::commands::USERNOTICE;
+
 				const std::string msg1{
 					":tmi.twitch.tv USERNOTICE #<channel> :message"s
 				};
@@ -252,10 +343,15 @@ namespace doc {
 				};
 			}
 			namespace userstate {
+				using Twitch::irc::message::cap::commands::USERSTATE;
+
 				const std::string msg1{
 					":tmi.twitch.tv USERSTATE #<channel>"s
 				};
-				
+				const USERSTATE parsed1{
+					"#<channel>"s
+				};
+
 				const std::vector<const std::string*> all_cases{
 					&msg1
 				};
@@ -272,7 +368,7 @@ namespace doc {
 	}\
 	BOOST_AUTO_TEST_CASE(match_PLAINMSG)\
 	{\
-		BOOST_CHECK((static_cast<bool>(MessageType::is(::doc::plainmsg)) == std::is_same<MessageType, message::Plain_message>::value));\
+		BOOST_CHECK((static_cast<bool>(MessageType::is(::doc::privmsg)) == std::is_same<MessageType, message::PRIVMSG>::value));\
 	}
 
 #define MATCH_COMMANDS(MessageType)\
@@ -417,12 +513,12 @@ BOOST_AUTO_TEST_SUITE(raw_messages_tests_suite)
 	BOOST_AUTO_TEST_SUITE_END() // PING_suite
 
 	BOOST_AUTO_TEST_SUITE(PLAINMSG_suite)
-		using Twitch::irc::message::Plain_message;
+		using Twitch::irc::message::PRIVMSG;
 	
-		MATCH_RAW_SUITE_TEMPLATE       (Plain_message)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (Plain_message)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(Plain_message)
-		MATCH_TAGS_SUITE_TEMPLATE      (Plain_message)
+		MATCH_RAW_SUITE_TEMPLATE       (PRIVMSG)
+		MATCH_COMMANDS_SUITE_TEMPLATE  (PRIVMSG)
+		MATCH_MEMBERSHIP_SUITE_TEMPLATE(PRIVMSG)
+		MATCH_TAGS_SUITE_TEMPLATE      (PRIVMSG)
 	BOOST_AUTO_TEST_SUITE_END() // PLAINMSG_suite
 BOOST_AUTO_TEST_SUITE_END() // raw_messages_tests_suite
 

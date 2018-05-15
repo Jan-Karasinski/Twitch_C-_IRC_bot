@@ -30,6 +30,9 @@
     <ClInclude Include="..\Twitch_C++_IRC_bot\Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Twitch_C++_IRC_bot\bot_io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -38,10 +41,10 @@
     <ClCompile Include="ParserTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Twitch_C++_IRC_bot\IRC_Bot.cpp">
+    <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessage.cpp">
+    <ClCompile Include="..\Twitch_C++_IRC_bot\bot_io.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
