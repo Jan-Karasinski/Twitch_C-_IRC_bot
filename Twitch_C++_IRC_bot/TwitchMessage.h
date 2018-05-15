@@ -201,27 +201,27 @@ namespace Twitch::irc::message {
 			}
 			template<class Logger>
 			Logger& operator<<(Logger& logger, const NOTICE& msg) {
-				logger << "@msg-id=" << msg.msg_id
+				return logger << "@msg-id=" << msg.msg_id
 					<< ":tmi.twitch.tv NOTICE " << msg.channel
 					<< " :" << msg.message;
 			}
 			template<class Logger>
 			Logger& operator<<(Logger& logger, const RECONNECT& msg) {
-				logger << "RECONNECT";
+				return logger << "RECONNECT";
 			}
 			template<class Logger>
 			Logger& operator<<(Logger& logger, const ROOMSTATE& msg) {
-				logger << ":tmi.twitch.tv ROOMSTATE " << msg.channel;
+				return logger << ":tmi.twitch.tv ROOMSTATE " << msg.channel;
 			}
 			template<class Logger>
 			Logger& operator<<(Logger& logger, const USERNOTICE& msg) {
-				logger << ":tmi.twitch.tv USERNOTICE " << msg.channel
+				return logger << ":tmi.twitch.tv USERNOTICE " << msg.channel
 					<< " :" << msg.message;
 			}
 			template<class Logger>
 			Logger& operator<<(Logger& logger, const USERSTATE& msg) {
-					logger << ":tmi.twitch.tv USERSTATE " << msg.channel;
-				}
+				return logger << ":tmi.twitch.tv USERSTATE " << msg.channel;
+			}
 		} // namespace commands
 
 		/// https://dev.twitch.tv/docs/irc#twitch-irc-capability-membership
@@ -832,7 +832,9 @@ namespace Twitch::irc::message {
 				else {
 					logger << "ROOMSTATE serialization error";
 				}
-				return logger << ' ' << static_cast<commands::ROOMSTATE>(msg);
+				logger << ' ' << static_cast<commands::ROOMSTATE>(msg);
+				return logger; // prevents Error C2440 'return': cannot convert from 'std::ostream' to 'std::ofstream &'
+
 			}
 
 			// USERNOTICE msg-id details
