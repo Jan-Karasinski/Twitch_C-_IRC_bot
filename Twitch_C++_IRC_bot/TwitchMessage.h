@@ -328,6 +328,7 @@ namespace Twitch::irc::message {
 
 		/// https://dev.twitch.tv/docs/irc#twitch-irc-capability-tags
 		namespace tags {
+			// TODO: find missig badges and add
 			using BadgeLevel = int;
 			struct Badge{
 				enum Type {
@@ -447,8 +448,7 @@ namespace Twitch::irc::message {
 					return user.empty();
 				}
 
-				// default == permanent
-				const std::optional<std::chrono::seconds> ban_duration{ 0 };
+				const std::optional<std::chrono::seconds> ban_duration{ 0 }; // default == permanent
 				const std::optional<std::string> ban_reason;
 				const std::string                room_id;
 				const std::optional<std::string> target_user_id;
@@ -500,6 +500,7 @@ namespace Twitch::irc::message {
 				const unsigned int bits{ 0 }; // default == not bits msg
 				const std::string color; // #RRGGBB
 				const std::string display_name;
+				const bool emote_only{ false };
 				const std::string emotes; // list of emotes and their pos in message, left unprocessed
 				const std::string id;
 				const bool        mod;
@@ -516,6 +517,7 @@ namespace Twitch::irc::message {
 					unsigned int  t_bits,
 					std::string&& t_color,
 					std::string&& t_display_name,
+					bool          t_emote_only,
 					std::string&& t_emotes,
 					std::string&& t_id,
 					bool          t_mod,
@@ -795,7 +797,7 @@ namespace Twitch::irc::message {
 			Logger& operator<<(Logger& logger, const ROOMSTATE& msg) {
 				if (!msg.is_update()) {
 					logger
-						<< "@broadcaster-lang=" << msg.broadcaster_lang.value() << ';'
+						<< "@broadcaster-lang=" << msg.broadcaster_lang.value_or("") << ';'
 						<< "emote-only="        << msg.emote_only.value()       << ';'
 						<< "followers-only="    << msg.followers_only.value()   << ';'
 						<< "r9k="               << msg.r9k.value()              << ';'
@@ -845,7 +847,7 @@ namespace Twitch::irc::message {
 			template<class Logger>
 			Logger& operator<<(Logger& logger, const USERNOTICE::Sub& msg) {
 				return logger
-					<< "msg-id=sub;"
+					<< (msg.months == 1 ? "msg-id=sub;" : "msg-id=resub;")
 					<< "msg-param-months="        << msg.months        << ';'
 					<< "msg-param-sub-plan-name=" << msg.sub_plan_name << ';'
 					<< "msg-param-sub-plan="      << msg.sub_plan      << ';';
@@ -926,7 +928,7 @@ namespace Twitch::irc::message {
 		std::string translate_sub_plan(const std::string_view raw_sub_plan) const {
 			using namespace std::string_view_literals;
 			using namespace std::string_literals;
-			if (raw_sub_plan == "Prime"sv) { return "Prime"s; }
+			if (raw_sub_plan == "Prime"sv) { return "Prime"s ; }
 			if (raw_sub_plan == "1000"sv)  { return "Tier 1"s; }
 			if (raw_sub_plan == "2000"sv)  { return "Tier 2"s; }
 			if (raw_sub_plan == "3000"sv)  { return "Tier 3"s; }

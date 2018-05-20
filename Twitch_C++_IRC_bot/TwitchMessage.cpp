@@ -31,7 +31,7 @@ namespace { // helpers
 		if (splitted.size() % 2 != 0 || splitted.empty()) { return {}; }
 
 		std::map<Badge, BadgeLevel> badges;
-		for (std::size_t i{ 0 }; i < splitted.size() / 2; i += 2) {
+		for (std::size_t i{ 0 }; i < splitted.size(); i += 2) {
 			badges.emplace(
 				Badge::from_string(splitted[i]),
 				std::stoi(splitted[i + 1])
@@ -40,17 +40,7 @@ namespace { // helpers
 		return badges;
 	}
 
-	inline bool get_mod(std::string_view raw_message) noexcept {
-		using namespace std::string_view_literals;
-		return raw_message == "1"sv;
-	}
-
-	inline bool get_subscriber(std::string_view raw_message) noexcept {
-		using namespace std::string_view_literals;
-		return raw_message == "1"sv;
-	}
-
-	inline bool get_turbo(std::string_view raw_message) noexcept {
+	inline bool get_flag(std::string_view raw_message) noexcept {
 		using namespace std::string_view_literals;
 		return raw_message == "1"sv;
 	}
@@ -71,7 +61,7 @@ namespace { // helpers
 
 	unsigned int get_bits(std::string_view raw_bits) {
 		std::stringstream stream{ raw_bits.data() };
-		unsigned long bits;
+		unsigned long bits{ 0 };
 		stream >> bits;
 		return bits;
 	}
@@ -80,7 +70,7 @@ namespace { // helpers
 	std::optional<T> get_optional(std::string&& raw) {
 		try {
 			std::stringstream str{ raw };
-			T result;
+			T result{};
 			str >> result;
 			return result;
 		}
@@ -155,7 +145,7 @@ namespace Twitch::irc::message {
 	}
 
 	const std::regex PRIVMSG::regex{
-		R"(:(.+)!(?:.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?)"
+		R"(:([^!]+)!(?:[^@]+)@(?:[^.]+).([^ ]+) PRIVMSG (#[^ ]+) :(.+)[\r\n|\r|\n]?)"
 	};
 	std::optional<PRIVMSG> PRIVMSG::is(std::string_view raw_message) {
 		std::cmatch match;
@@ -251,7 +241,7 @@ namespace Twitch::irc::message {
 				constexpr const size_t user    = 1;
 				constexpr const size_t msg_id  = 2;
 				constexpr const size_t channel = 3;
-				constexpr const size_t list    = 4; //-V112
+				constexpr const size_t list    = 4;
 
 				const std::string msg{ match.str(list) };
 				
@@ -260,7 +250,7 @@ namespace Twitch::irc::message {
 					match.str(user),
 					match.str(msg_id),
 					match.str(channel),
-					get_list_of_names(msg == "End of /NAMES list"s ? ""s : match.str(list))
+					get_list_of_names(match.str(list))
 				};
 			}
 
@@ -304,15 +294,13 @@ namespace Twitch::irc::message {
 		}
 		namespace tags {
 			const std::regex CLEARCHAT::regex{
-				"@(?:ban-duration=([0-9]+);)?(?:ban-reason=([^; ]*))?;"
+				"@(?:ban-duration=([0-9]+);)?(?:ban-reason=([^; ]*);)?"
 				"room-id=([^; ]+);(?:target-user-id=([^; ]+);)?tmi-sent-ts=([0-9]+)"
-				" :tmi.twitch.tv CLEARCHAT (#.+)(?: :(.+))?[\r\n|\r|\n]?"
+				" :tmi.twitch.tv CLEARCHAT (#[^ ]+)(?: :(.+))?[\r\n|\r|\n]?"
 			};
 			std::optional<CLEARCHAT> CLEARCHAT::is(std::string_view raw_message) {
 				std::cmatch match;
 				if (!std::regex_match(raw_message.data(), match, regex)) { return std::nullopt; }
-
-				Logger::DefaultLogger::get() << "Debug test: " << raw_message << '\n';
 
 				constexpr const size_t duration       = 1;
 				constexpr const size_t reason         = 2;
@@ -406,9 +394,10 @@ namespace Twitch::irc::message {
 			}
 
 			const std::regex PRIVMSG::regex{
-				"@badges=([^;]*);(?:bits=([0-9]+);)?color=([^;]*);display-name=([^;]*);emotes=([^;]*);id=([^;]+);mod=([01]);room-id=([0-9]+);"
-				"subscriber=([01]);tmi-sent-ts=([0-9]+);turbo=([01]);user-id=([0-9]+);user-type=([^ ]*)"
-				" :(.+)!(?:.+)@(.+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?"
+				"@badges=([^;]*);(?:bits=([0-9]+);)?color=([^;]*);display-name=([^;]*);(?:emote-only=([01]);)?"
+				"emotes=([^;]*);id=([^;]+);mod=([01]);room-id=([0-9]+);subscriber=([01]);"
+				"tmi-sent-ts=([0-9]+);turbo=([01]);user-id=([0-9]+);user-type=([^ ]*)"
+				" :([^!]+)!(?:[^@]+)@(?:[^.]+).([^ ]+) PRIVMSG (#.+) :(.+)[\r\n|\r|\n]?"
 			};
 			std::optional<PRIVMSG> PRIVMSG::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -418,19 +407,20 @@ namespace Twitch::irc::message {
 				constexpr const size_t bits         = 2;
 				constexpr const size_t color        = 3;
 				constexpr const size_t display_name = 4;
-				constexpr const size_t emotes       = 5;
-				constexpr const size_t id           = 6;
-				constexpr const size_t mod          = 7;
-				constexpr const size_t room_id      = 8;
-				constexpr const size_t subscriber   = 9;
-				constexpr const size_t tmi_sent_ts  = 10;
-				constexpr const size_t turbo        = 11;
-				constexpr const size_t user_id      = 12;
-				constexpr const size_t user_type    = 13;
-				constexpr const size_t user         = 14;
-				constexpr const size_t host         = 15;
-				constexpr const size_t channel      = 16;
-				constexpr const size_t message      = 17;
+				constexpr const size_t emote_only   = 5;
+				constexpr const size_t emotes       = 6;
+				constexpr const size_t id           = 7;
+				constexpr const size_t mod          = 8;
+				constexpr const size_t room_id      = 9;
+				constexpr const size_t subscriber   = 10;
+				constexpr const size_t tmi_sent_ts  = 11;
+				constexpr const size_t turbo        = 12;
+				constexpr const size_t user_id      = 13;
+				constexpr const size_t user_type    = 14;
+				constexpr const size_t user         = 15;
+				constexpr const size_t host         = 16;
+				constexpr const size_t channel      = 17;
+				constexpr const size_t message      = 18;
 
 				return PRIVMSG{
 					message::PRIVMSG{
@@ -443,13 +433,14 @@ namespace Twitch::irc::message {
 					get_bits(match.str(bits)),
 					match.str(color),
 					match.str(display_name),
+					get_flag(match.str(emote_only)),
 					match.str(emotes),
 					match.str(id),
-					get_mod(match.str(mod)),
+					get_flag(match.str(mod)),
 					match.str(room_id),
-					get_subscriber(match.str(subscriber)),
+					get_flag(match.str(subscriber)),
 					get_ts(match.str(tmi_sent_ts)),
-					get_turbo(match.str(turbo)),
+					get_flag(match.str(turbo)),
 					match.str(user_id),
 					UserType::from_string(match.str(user_type))
 				};
@@ -461,6 +452,7 @@ namespace Twitch::irc::message {
 				unsigned int  t_bits,
 				std::string&& t_color,
 				std::string&& t_display_name,
+				bool          t_emote_only,
 				std::string&& t_emotes,
 				std::string&& t_id,
 				bool          t_mod,
@@ -476,6 +468,7 @@ namespace Twitch::irc::message {
 				bits(t_bits),
 				color(std::move(t_color)),
 				display_name(std::move(t_display_name)),
+				emote_only(t_emote_only),
 				emotes(std::move(t_emotes)),
 				id(std::move(t_id)),
 				mod(t_mod),
@@ -600,7 +593,7 @@ namespace Twitch::irc::message {
 			}
 
 			const std::regex USERNOTICE::Sub::regex{
-				R"(msg-id=(?:sub|resub);msg-param-months=([0-9]+);msg-param-sub-plan=(.+);msg-param-sub-plan-name=(.+))"
+				"msg-id=(?:sub|resub);msg-param-months=([0-9]+);msg-param-sub-plan=([^;]+);msg-param-sub-plan-name=(.+)"
 			};
 			std::optional<USERNOTICE::Sub> USERNOTICE::Sub::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -628,9 +621,9 @@ namespace Twitch::irc::message {
 			}
 
 			const std::regex USERNOTICE::Subgift::regex{
-				R"(msg-id=subgift;msg-param-months=([0-9]+);msg-param-recipient-display-name=(.*);)"
-				R"(msg-param-recipient-id=(.+);msg-param-recipient-name=(.+);)"
-				R"(msg-param-sub-plan-name=(.*);msg-param-sub-plan=(.+))"
+				"msg-id=subgift;msg-param-months=([0-9]+);msg-param-recipient-display-name=([^;]*);"
+				"msg-param-recipient-id=([^;]+);msg-param-recipient-name=([^;]+);"
+				"msg-param-sub-plan-name=([^;]*);msg-param-sub-plan=(.+)"
 			};
 			std::optional<USERNOTICE::Subgift> USERNOTICE::Subgift::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -667,7 +660,7 @@ namespace Twitch::irc::message {
 			}
 
 			const std::regex USERNOTICE::Raid::regex{
-				R"(msg-id=raid;msg-param-displayName=(.*);msg-param-login=(.+);msg-param-viewerCount=([0-9]*))"
+				R"(msg-id=raid;msg-param-displayName=([^;]*);msg-param-login=([^;]+);msg-param-viewerCount=([0-9]*))"
 			};
 			std::optional<USERNOTICE::Raid> USERNOTICE::Raid::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -716,7 +709,7 @@ namespace Twitch::irc::message {
 				R"(@badges=(.*);color=(.*);display-name=(.*);emotes=(.*);)"
 				R"(id=(.+);login=(.+);mod=([01]);(msg-id=.+);room-id=(.+);)"
 				R"(subscriber=([01]);system-msg=(.*);tmi-sent-ts=([0-9]+);turbo=([01]);)"
-				R"(user-id=(.+);user-type=(.*) :tmi.twitch.tv USERNOTICE (#.+)(?: :(.+))?[\r\n|\r|\n]?)"
+				R"(user-id=(.+);user-type=(.*) :tmi.twitch.tv USERNOTICE (#[^ ]+)(?: :(.+))?[\r\n|\r|\n]?)"
 			};
 			std::optional<USERNOTICE> USERNOTICE::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -817,6 +810,24 @@ namespace Twitch::irc::message {
 			}
 
 			bool operator==(const USERNOTICE& lhs, const USERNOTICE& rhs) {
+				bool b = lhs.msg_id == rhs.msg_id;
+				b = lhs.id           == rhs.id;
+				b = lhs.tmi_sent_ts  == rhs.tmi_sent_ts;
+				b = lhs.user_id      == rhs.user_id;
+				b = lhs.login        == rhs.login;
+				b = lhs.badges       == rhs.badges;
+				b = lhs.color        == rhs.color;
+				b = lhs.display_name == rhs.display_name;
+				b = lhs.emotes       == rhs.emotes;
+				b = lhs.mod          == rhs.mod;
+				b = lhs.msg_id       == rhs.msg_id;
+				b = lhs.room_id      == rhs.room_id;
+				b = lhs.subscriber   == rhs.subscriber;
+				b = lhs.system_msg   == rhs.system_msg;
+				b = lhs.turbo        == rhs.turbo;
+				b = lhs.user_type    == rhs.user_type;
+				b = static_cast<commands::USERNOTICE>(lhs)
+					== static_cast<commands::USERNOTICE>(rhs);
 				return lhs.id           == rhs.id
 					&& lhs.tmi_sent_ts  == rhs.tmi_sent_ts
 					&& lhs.user_id      == rhs.user_id
@@ -914,7 +925,7 @@ namespace Twitch::irc::message {
 		}
 		namespace commands {
 			const std::regex CLEARCHAT::regex{
-				R"(:tmi.twitch.tv CLEARCHAT (#.+)(?: :(.+))?[\r\n|\r|\n]?)"
+				R"(:tmi.twitch.tv CLEARCHAT (#[^ ]+)(?: :(.+))?[\r\n|\r|\n]?)"
 			};
 			std::optional<CLEARCHAT> CLEARCHAT::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -939,7 +950,7 @@ namespace Twitch::irc::message {
 			}
 
 			const std::regex HOSTTARGET::regex{
-				R"(:tmi.twitch.tv HOSTTARGET (#.+) ([^ ]+|:-) (?:\[([0-9]*)\])?[\r\n|\r|\n]?)"
+				R"(:tmi.twitch.tv HOSTTARGET (#[^ ]+) (?:([^ :]+)|:-) (?:\[([0-9]*)\])?[\r\n|\r|\n]?)"
 			};
 			std::optional<HOSTTARGET> HOSTTARGET::is(std::string_view raw_message) {
 				std::cmatch match;
@@ -967,7 +978,7 @@ namespace Twitch::irc::message {
 			}
 
 			const std::regex NOTICE::regex{
-				R"(@msg-id=(.+):tmi.twitch.tv NOTICE (#.+) :(.+)[\r\n|\r|\n]?)"
+				R"(@msg-id=(.+) :tmi.twitch.tv NOTICE (#.+) :(.+)[\r\n|\r|\n]?)"
 			};
 			std::optional<NOTICE> NOTICE::is(std::string_view raw_message) {
 				std::cmatch match;

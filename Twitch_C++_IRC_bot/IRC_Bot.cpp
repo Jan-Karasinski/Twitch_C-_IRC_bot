@@ -183,13 +183,14 @@ namespace Twitch::irc {
 				std::cerr << error.message() << '\n';
 				return;
 			}
-
+			Logger::DefaultLogger::get() << recived_message << '\n';
+			
 			auto parse_result = m_parser->process(recived_message);
 			boost::apply_visitor(
 				m_parser->get_visitor(&m_commands),
 				parse_result
 			);
-			
+
 			using namespace std::chrono_literals;
 			std::this_thread::sleep_for(5ms);
 		}
