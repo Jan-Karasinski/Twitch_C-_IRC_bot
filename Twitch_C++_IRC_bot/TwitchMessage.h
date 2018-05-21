@@ -328,6 +328,48 @@ namespace Twitch::irc::message {
 
 		/// https://dev.twitch.tv/docs/irc#twitch-irc-capability-tags
 		namespace tags {
+			struct Color {
+				bool initialized{ false };
+				const int r{ 0 }, g{ 0 }, b{ 0 };
+
+				static inline auto from_string(
+					const std::string& r,
+					const std::string& g,
+					const std::string& b
+				);
+
+				Color() = default;
+				constexpr Color(int t_r, int t_g, int t_b) noexcept;
+
+				friend bool operator==(Color lhs, Color rhs) {
+					if (!(lhs.initialized && rhs.initialized)) { return false; }
+
+					return lhs.r == rhs.r
+						&& lhs.g == rhs.g
+						&& lhs.b == rhs.b;
+				}
+				friend bool operator!=(Color lhs, Color rhs) {
+					return !(lhs == rhs);
+				}
+			};
+
+			auto Color::from_string(
+				const std::string& r,
+				const std::string& g,
+				const std::string& b
+			) {
+				auto hex_to_int = [](const std::string& raw_hex) {
+					return std::stoi(raw_hex, 0, 16);
+				};
+
+				return Color{ hex_to_int(r), hex_to_int(g), hex_to_int(b) };
+			}
+
+			constexpr Color::Color(int t_r, int t_g, int t_b) noexcept
+				: initialized(true), r(t_r), g(t_g), b(t_b)
+			{
+			}
+
 			// TODO: find missig badges and add
 			using BadgeLevel = int;
 			struct Badge{
@@ -475,7 +517,7 @@ namespace Twitch::irc::message {
 				static std::optional<GLOBALUSERSTATE> is(std::string_view raw_message);
 
 				const std::map<Badge, BadgeLevel> badges;
-				const std::string color;
+				const Color color;
 				const std::string display_name;
 				const std::string emote_set;
 				const std::string user_id;
@@ -498,7 +540,7 @@ namespace Twitch::irc::message {
 
 				const std::map<Badge, BadgeLevel> badges;
 				const unsigned int bits{ 0 }; // default == not bits msg
-				const std::string color; // #RRGGBB
+				const Color color;
 				const std::string display_name;
 				const bool emote_only{ false };
 				const std::string emotes; // list of emotes and their pos in message, left unprocessed
@@ -515,7 +557,7 @@ namespace Twitch::irc::message {
 					message::PRIVMSG&& t_plain,
 					std::map<Badge, BadgeLevel>&& t_badge,
 					unsigned int  t_bits,
-					std::string&& t_color,
+					Color         t_color,
 					std::string&& t_display_name,
 					bool          t_emote_only,
 					std::string&& t_emotes,
@@ -524,9 +566,9 @@ namespace Twitch::irc::message {
 					std::string&& t_room_id,
 					bool          t_subscriber,
 					std::chrono::seconds t_tmi_sent_ts,
-					bool           t_turbo,
-					std::string&&  t_user_id,
-					UserType t_user_type
+					bool          t_turbo,
+					std::string&& t_user_id,
+					UserType      t_user_type
 				);
 
 				friend bool operator==(const PRIVMSG& lhs, const PRIVMSG& rhs);
@@ -633,7 +675,6 @@ namespace Twitch::irc::message {
 				};
 				struct Ritual
 				{
-					static const std::regex regex;
 					static std::optional<Ritual> is(std::string_view raw_message);
 
 					friend bool operator==(const Ritual& lhs, const Ritual& rhs);
@@ -645,7 +686,7 @@ namespace Twitch::irc::message {
 				static std::optional<USERNOTICE> is(std::string_view raw_message);
 
 				const std::map<Badge, BadgeLevel> badges;
-				const std::string color;
+				const Color       color;
 				const std::string display_name;
 				const std::string emotes;
 				const std::string id;
@@ -658,12 +699,12 @@ namespace Twitch::irc::message {
 				const std::chrono::seconds tmi_sent_ts;
 				const bool        turbo;
 				const std::string user_id;
-				const UserType user_type;
+				const UserType    user_type;
 
 				USERNOTICE(
 					cap::commands::USERNOTICE&&   t_usernotice,
 					std::map<Badge, BadgeLevel>&& t_badges,
-					std::string&& t_color,
+					Color         t_color,
 					std::string&& t_display_name,
 					std::string&& t_emotes,
 					std::string&& t_id,
@@ -674,9 +715,9 @@ namespace Twitch::irc::message {
 					bool          t_subscriber,
 					std::string&& t_system_msg,
 					std::chrono::seconds t_tmi_sent_ts,
-					bool           t_turbo,
-					std::string&&  t_user_id,
-					UserType t_user_type
+					bool          t_turbo,
+					std::string&& t_user_id,
+					UserType      t_user_type
 				);
 
 				friend bool operator==(const USERNOTICE& lhs, const USERNOTICE& rhs);
@@ -691,22 +732,22 @@ namespace Twitch::irc::message {
 				static std::optional<USERSTATE> is(std::string_view raw_message);
 
 				const std::map<Badge, BadgeLevel> badges;
-				const std::string color;
+				const Color       color;
 				const std::string display_name;
 				const std::string emote_sets;
 				const bool        mod;
 				const bool        subscriber;
-				const UserType user_type;
+				const UserType    user_type;
 
 				USERSTATE(
-					cap::commands::USERSTATE&& t_userstate,
+					cap::commands::USERSTATE&&    t_userstate,
 					std::map<Badge, BadgeLevel>&& t_badges,
-					std::string&& t_color,
+					Color         t_color,
 					std::string&& t_display_name,
 					std::string&& t_emote_sets,
 					bool          t_mod,
 					bool          t_subscriber,
-					UserType t_user_type
+					UserType      t_user_type
 				);
 
 				friend bool operator==(const USERSTATE& lhs, const USERSTATE& rhs);
@@ -717,6 +758,16 @@ namespace Twitch::irc::message {
 			};
 
 			// Badges & UserType::Type
+			template<class Logger>
+			Logger& operator<<(Logger& logger, Color color) {
+				if (!color.initialized) { return logger; }
+				return logger << '#'
+					<< std::hex << std::uppercase
+						<< (color.r <= 0xF ? "0" : "") << color.r
+						<< (color.g <= 0xF ? "0" : "") << color.g
+						<< (color.b <= 0xF ? "0" : "") << color.b
+					<< std::dec << std::nouppercase;
+			}
 			template<class Logger>
 			Logger& operator<<(Logger& logger, Badge badge) {
 				return logger << Badge::to_string(badge);

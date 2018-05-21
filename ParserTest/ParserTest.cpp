@@ -201,6 +201,7 @@ namespace doc {
 			}
 			namespace globaluserstate {
 				using Twitch::irc::message::cap::tags::GLOBALUSERSTATE;
+				using Twitch::irc::message::cap::tags::Color;
 
 				// doc is incorrect: missing parameters,
 				//                   additional parameters not present in real message
@@ -226,7 +227,7 @@ namespace doc {
 						"emote-sets=0,33563;user-id=99999999;user-type="
 						" :tmi.twitch.tv GLOBALUSERSTATE"s,
 						GLOBALUSERSTATE{
-							{}, "#0000FF"s, "Name"s, "0,33563"s,
+							{}, Color{ 0x00, 0x00, 0xFF }, "Name"s, "0,33563"s,
 							"99999999"s, Twitch::irc::message::cap::tags::UserType::empty
 						}
 					}
@@ -234,6 +235,7 @@ namespace doc {
 			}
 			namespace privmsg {
 				using Twitch::irc::message::cap::tags::PRIVMSG;
+				using Twitch::irc::message::cap::tags::Color;
 				using Twitch::irc::message::cap::tags::Badge;
 				using Twitch::irc::message::cap::tags::UserType;
 				
@@ -274,7 +276,7 @@ namespace doc {
 						" :ronni!ronni@ronni.tmi.twitch.tv PRIVMSG #dallas :cheer100"s,
 						PRIVMSG{
 							Twitch::irc::message::PRIVMSG{ "ronni"s, "tmi.twitch.tv"s, "#dallas"s, "cheer100"s },
-							{ { Badge::staff, 1 }, { Badge::bits, 1000 } }, 100, ""s, "dallas"s,
+							{ { Badge::staff, 1 }, { Badge::bits, 1000 } }, 100, Color{}, "dallas"s,
 							false, ""s, "b34ccfc7-4977-403a-8a94-33c6bac34fb8"s,
 							false, "1337"s, false, std::chrono::seconds{ 1507246572675 },
 							true, "1337"s, UserType::staff
@@ -288,7 +290,7 @@ namespace doc {
 						" :user!user@user.tmi.twitch.tv PRIVMSG #channel :Kappa Keepo Kappa"s,
 						PRIVMSG{
 							Twitch::irc::message::PRIVMSG{ "user"s, "tmi.twitch.tv"s, "#channel"s, "Kappa Keepo Kappa"s },
-							{ { Badge::broadcaster, 1 } }, 0, "#0000FF"s, "Nick"s,
+							{ { Badge::broadcaster, 1 } }, 0, Color{ 0x00, 0x00, 0xFF }, "Nick"s,
 							true, "25:0-4,12-16/1902:6-10"s, "99999999-9999-9999-9999-999999999999"s,
 							false, "99999999"s, false, std::chrono::seconds{ 1526424153891 },
 							false, "99999999"s, UserType::empty
@@ -381,6 +383,7 @@ namespace doc {
 			}
 			namespace usernotice {
 				using Twitch::irc::message::cap::tags::USERNOTICE;
+				using Twitch::irc::message::cap::tags::Color;
 				using Twitch::irc::message::cap::tags::Badge;
 				using Twitch::irc::message::cap::tags::UserType;
 
@@ -441,7 +444,7 @@ namespace doc {
 								"#dallas"s, "Great stream -- keep it up!"s
 							},
 							{ {Badge::staff, 1}, {Badge::broadcaster, 1}, {Badge::turbo, 1} },
-							"#008000"s, "ronni"s, ""s, "db25007f-7a18-43eb-9379-80131e44d633"s,
+							Color{ 0x00, 0x80, 0x00 }, "ronni"s, ""s, "db25007f-7a18-43eb-9379-80131e44d633"s,
 							"ronni"s, false, USERNOTICE::Sub{ 6, "Prime"s, "Prime"s }, "1337"s,
 							true, "ronni has subscribed for 6 months!"s,
 							std::chrono::seconds{ 1507246572675 }, true, "1337"s, UserType::staff
@@ -464,7 +467,7 @@ namespace doc {
 							},
 							// premium badge - wtf??? doc don't say a word about it
 							{ {Badge::staff, 1}, {Badge::unhandled_badge, 1} },
-							"#0000FF"s, "TWW2"s, ""s, "e9176cd8-5e22-4684-ad40-ce53c2561c5e"s,
+							Color{ 00, 00, 0xFF }, "TWW2"s, ""s, "e9176cd8-5e22-4684-ad40-ce53c2561c5e"s,
 							"tww2"s, false,
 							USERNOTICE::Subgift{
 								1, "Mr_Woodchuck"s, "89614178"s, "mr_woodchuck"s,
@@ -486,7 +489,7 @@ namespace doc {
 								"#othertestchannel"s, ""s
 							},
 							{ {Badge::turbo, 1} },
-							"#9ACD32"s, "TestChannel"s, ""s, "3d830f12-795c-447d-af3c-ea05e40fbddb"s,
+							Color{ 0x9A, 0xCD, 0x32 }, "TestChannel"s, ""s, "3d830f12-795c-447d-af3c-ea05e40fbddb"s,
 							"testchannel"s, false,
 							USERNOTICE::Raid{
 								"TestChannel"s, "testchannel"s,  15
@@ -505,8 +508,8 @@ namespace doc {
 							Twitch::irc::message::cap::commands::USERNOTICE{
 								"#seventoes"s, "HeyGuys"s
 							},
-							{}, 
-							""s, "SevenTest1"s, "30259:0-6"s, "37feed0f-b9c7-4c3a-b475-21c6c6d21c3d"s,
+							{}, Color{},
+							"SevenTest1"s, "30259:0-6"s, "37feed0f-b9c7-4c3a-b475-21c6c6d21c3d"s,
 							"seventest1"s, false,
 							USERNOTICE::Ritual{},
 							"6316121"s, false, "Seventoes is new here!"s,
@@ -517,6 +520,7 @@ namespace doc {
 			}
 			namespace userstate {
 				using Twitch::irc::message::cap::tags::USERSTATE;
+				using Twitch::irc::message::cap::tags::Color;
 				using Twitch::irc::message::cap::tags::Badge;
 				using Twitch::irc::message::cap::tags::UserType;
 
@@ -547,7 +551,7 @@ namespace doc {
 						" :tmi.twitch.tv USERSTATE #channel"s,
 						USERSTATE{
 							Twitch::irc::message::cap::commands::USERSTATE{ "#channel"s },
-							{ {Badge::broadcaster, 1} }, "#0000FF"s, "Nick"s, "0,33563"s,
+							{ {Badge::broadcaster, 1} }, Color{ 00, 00, 0xFF}, "Nick"s, "0,33563"s,
 							false, false, UserType::empty
 						}
 					}
@@ -1086,327 +1090,3 @@ boost::unit_test::test_suite* init_unit_test_suite(int /*argc*/, char* /*argv*/[
 
 	return 0;
 }
-
-/*
-#define MATCH_RAW(MessageType)\
-	namespace message = Twitch::irc::message;\
-	BOOST_AUTO_TEST_CASE(match_PING)\
-	{\
-		BOOST_CHECK((static_cast<bool>(MessageType::is(::doc::ping)) == std::is_same<MessageType, message::PING>::value));\
-	}\
-	BOOST_AUTO_TEST_CASE(match_PLAINMSG)\
-	{\
-		BOOST_CHECK((static_cast<bool>(MessageType::is(::doc::privmsg)) == std::is_same<MessageType, message::PRIVMSG>::value));\
-	}
-
-#define MATCH_COMMANDS(MessageType)\
-	namespace commands = Twitch::irc::message::cap::commands;\
-	BOOST_AUTO_TEST_CASE(match_CLEARCHAT)\
-	{\
-		for (const auto* msg : doc::cap::commands::clearchat::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::CLEARCHAT>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_HOSTTARGET)\
-	{\
-		for (const auto* msg : doc::cap::commands::hosttarget::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::HOSTTARGET>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_NOTICE)\
-	{\
-		for (const auto* msg : doc::cap::commands::notice::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::NOTICE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_RECONNECT)\
-	{\
-		for (const auto* msg : doc::cap::commands::reconnect::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::RECONNECT>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_ROOMSTATE)\
-	{\
-		for (const auto* msg : doc::cap::commands::roomstate::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::ROOMSTATE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_USERNOTICE)\
-	{\
-		for (const auto* msg : doc::cap::commands::usernotice::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::USERNOTICE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_USERSTATE)\
-	{\
-		for (const auto* msg : doc::cap::commands::userstate::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, commands::USERSTATE>()));\
-		}\
-	}
-
-#define MATCH_MEMBERSHIP(MessageType)\
-	namespace membership = Twitch::irc::message::cap::membership;\
-	BOOST_AUTO_TEST_CASE(match_JOIN)\
-	{\
-		for (const auto* msg : doc::cap::membership::join::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, membership::JOIN>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_MODE)\
-	{\
-		for (const auto* msg : doc::cap::membership::mode::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, membership::MODE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_NAMES)\
-	{\
-		for (const auto* msg : doc::cap::membership::names::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, membership::NAMES>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_PART)\
-	{\
-		for (const auto* msg : doc::cap::membership::part::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, membership::PART>()));\
-		}\
-	}
-
-#define MATCH_TAGS(MessageType)\
-	namespace tags = Twitch::irc::message::cap::tags;\
-	BOOST_AUTO_TEST_CASE(match_CLEARCHAT)\
-	{\
-		for (const auto* msg : doc::cap::tags::clearchat::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, tags::CLEARCHAT>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_GLOBALUSERSTATE)\
-	{\
-		for (const auto* msg : doc::cap::tags::globaluserstate::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, tags::GLOBALUSERSTATE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_PRIVMSG)\
-	{\
-		for (const auto* msg : doc::cap::tags::privmsg::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, tags::PRIVMSG>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_ROOMSTATE)\
-	{\
-		for (const auto* msg : doc::cap::tags::roomstate::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, tags::ROOMSTATE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_USERNOTICE)\
-	{\
-		for (const auto* msg : doc::cap::tags::usernotice::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, tags::USERNOTICE>()));\
-		}\
-	}\
-	BOOST_AUTO_TEST_CASE(match_USERSTATE)\
-	{\
-		for (const auto* msg : doc::cap::tags::userstate::all_cases) {\
-			BOOST_CHECK((static_cast<bool>(MessageType::is(*msg)) == std::is_same<MessageType, tags::USERSTATE>()));\
-		}\
-	}
-
-#define MATCH_RAW_SUITE_TEMPLATE(MessageType)\
-	BOOST_AUTO_TEST_SUITE(match_raw)\
-		MATCH_RAW(MessageType)\
-	BOOST_AUTO_TEST_SUITE_END()
-
-#define MATCH_COMMANDS_SUITE_TEMPLATE(MessageType)\
-	BOOST_AUTO_TEST_SUITE(match_commands)\
-		MATCH_COMMANDS(MessageType)\
-	BOOST_AUTO_TEST_SUITE_END()
-
-#define MATCH_MEMBERSHIP_SUITE_TEMPLATE(MessageType)\
-	BOOST_AUTO_TEST_SUITE(match_membership)\
-		MATCH_MEMBERSHIP(MessageType)\
-	BOOST_AUTO_TEST_SUITE_END()
-
-#define MATCH_TAGS_SUITE_TEMPLATE(MessageType)\
-	BOOST_AUTO_TEST_SUITE(match_tags)\
-		MATCH_TAGS(MessageType)\
-	BOOST_AUTO_TEST_SUITE_END()
-
-BOOST_AUTO_TEST_SUITE(raw_messages_tests_suite)
-	BOOST_AUTO_TEST_SUITE(PING_suite)
-		using Twitch::irc::message::PING;
-
-		MATCH_RAW_SUITE_TEMPLATE       (PING)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (PING)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(PING)
-		MATCH_TAGS_SUITE_TEMPLATE      (PING)
-	BOOST_AUTO_TEST_SUITE_END() // PING_suite
-
-	BOOST_AUTO_TEST_SUITE(PLAINMSG_suite)
-		using Twitch::irc::message::PRIVMSG;
-	
-		MATCH_RAW_SUITE_TEMPLATE       (PRIVMSG)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (PRIVMSG)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(PRIVMSG)
-		MATCH_TAGS_SUITE_TEMPLATE      (PRIVMSG)
-	BOOST_AUTO_TEST_SUITE_END() // PLAINMSG_suite
-BOOST_AUTO_TEST_SUITE_END() // raw_messages_tests_suite
-
-BOOST_AUTO_TEST_SUITE(commands_tests_suite)
-	BOOST_AUTO_TEST_SUITE(CLEARCHAT_suite)
-		using Twitch::irc::message::cap::commands::CLEARCHAT;
-
-		MATCH_RAW_SUITE_TEMPLATE       (CLEARCHAT)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (CLEARCHAT)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(CLEARCHAT)
-		MATCH_TAGS_SUITE_TEMPLATE      (CLEARCHAT)
-	BOOST_AUTO_TEST_SUITE_END() // CLEARCHAT_suite
-
-	BOOST_AUTO_TEST_SUITE(HOSTTARGET_suite)
-		using Twitch::irc::message::cap::commands::HOSTTARGET;
-
-		MATCH_RAW_SUITE_TEMPLATE       (HOSTTARGET)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (HOSTTARGET)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(HOSTTARGET)
-		MATCH_TAGS_SUITE_TEMPLATE      (HOSTTARGET)
-	BOOST_AUTO_TEST_SUITE_END() // HOSTTARGET_suite
-
-	BOOST_AUTO_TEST_SUITE(NOTICE_suite)
-		using Twitch::irc::message::cap::commands::NOTICE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (NOTICE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (NOTICE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(NOTICE)
-		MATCH_TAGS_SUITE_TEMPLATE      (NOTICE)
-	BOOST_AUTO_TEST_SUITE_END() // NOTICE_suite
-
-	BOOST_AUTO_TEST_SUITE(RECONNECT_suite)
-		using Twitch::irc::message::cap::commands::RECONNECT;
-
-		MATCH_RAW_SUITE_TEMPLATE       (RECONNECT)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (RECONNECT)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(RECONNECT)
-		MATCH_TAGS_SUITE_TEMPLATE      (RECONNECT)
-	BOOST_AUTO_TEST_SUITE_END() // RECONNECT_suite
-
-	BOOST_AUTO_TEST_SUITE(ROOMSTATE_suite)
-		using Twitch::irc::message::cap::commands::ROOMSTATE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (ROOMSTATE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (ROOMSTATE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(ROOMSTATE)
-		MATCH_TAGS_SUITE_TEMPLATE      (ROOMSTATE)
-	BOOST_AUTO_TEST_SUITE_END() // ROOMSTATE_suite
-
-	BOOST_AUTO_TEST_SUITE(USERNOTICE_suite)
-		using Twitch::irc::message::cap::commands::USERNOTICE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (USERNOTICE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (USERNOTICE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(USERNOTICE)
-		MATCH_TAGS_SUITE_TEMPLATE      (USERNOTICE)
-	BOOST_AUTO_TEST_SUITE_END() // USERNOTICE_suite
-
-	BOOST_AUTO_TEST_SUITE(USERSTATE_suite)
-		using Twitch::irc::message::cap::commands::USERSTATE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (USERSTATE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (USERSTATE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(USERSTATE)
-		MATCH_TAGS_SUITE_TEMPLATE      (USERSTATE)
-	BOOST_AUTO_TEST_SUITE_END() // USERSTATE_suite
-BOOST_AUTO_TEST_SUITE_END() // commands_tests_suite
-
-BOOST_AUTO_TEST_SUITE(membership_tests_suite)
-	BOOST_AUTO_TEST_SUITE(JOIN_suite)
-		using Twitch::irc::message::cap::membership::JOIN;
-		
-		MATCH_RAW_SUITE_TEMPLATE       (JOIN)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (JOIN)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(JOIN)
-		MATCH_TAGS_SUITE_TEMPLATE      (JOIN)
-	BOOST_AUTO_TEST_SUITE_END() // JOIN_suite
-
-	BOOST_AUTO_TEST_SUITE(MODE_suite)
-		using Twitch::irc::message::cap::membership::MODE;
-		
-		MATCH_RAW_SUITE_TEMPLATE       (MODE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (MODE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(MODE)
-		MATCH_TAGS_SUITE_TEMPLATE      (MODE)
-	BOOST_AUTO_TEST_SUITE_END() // MODE_suite
-
-	BOOST_AUTO_TEST_SUITE(NAMES_suite)
-		using Twitch::irc::message::cap::membership::NAMES;
-		
-		MATCH_RAW_SUITE_TEMPLATE       (NAMES)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (NAMES)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(NAMES)
-		MATCH_TAGS_SUITE_TEMPLATE      (NAMES)
-	BOOST_AUTO_TEST_SUITE_END() // NAMES_suite
-
-	BOOST_AUTO_TEST_SUITE(PART_suite)
-		using Twitch::irc::message::cap::membership::PART;
-		
-		MATCH_RAW_SUITE_TEMPLATE       (PART)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (PART)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(PART)
-		MATCH_TAGS_SUITE_TEMPLATE      (PART)
-	BOOST_AUTO_TEST_SUITE_END() // PART_suite
-BOOST_AUTO_TEST_SUITE_END() // membership_tests_suite
-
-BOOST_AUTO_TEST_SUITE(tags_tests_suite)
-	BOOST_AUTO_TEST_SUITE(CLEARCHAT_suite)
-		using Twitch::irc::message::cap::tags::CLEARCHAT;
-
-		MATCH_RAW_SUITE_TEMPLATE       (CLEARCHAT)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (CLEARCHAT)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(CLEARCHAT)
-		MATCH_TAGS_SUITE_TEMPLATE      (CLEARCHAT)
-	BOOST_AUTO_TEST_SUITE_END() // CLEARCHAT_suite
-	
-	BOOST_AUTO_TEST_SUITE(GLOBALUSERSTATE_suite)
-		using Twitch::irc::message::cap::tags::GLOBALUSERSTATE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (GLOBALUSERSTATE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (GLOBALUSERSTATE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(GLOBALUSERSTATE)
-		MATCH_TAGS_SUITE_TEMPLATE      (GLOBALUSERSTATE)
-	BOOST_AUTO_TEST_SUITE_END() // GLOBALUSERSTATE_suite
-	
-	BOOST_AUTO_TEST_SUITE(PRIVMSG_suite)
-		using Twitch::irc::message::cap::tags::PRIVMSG;
-
-		MATCH_RAW_SUITE_TEMPLATE       (PRIVMSG)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (PRIVMSG)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(PRIVMSG)
-		MATCH_TAGS_SUITE_TEMPLATE      (PRIVMSG)
-	BOOST_AUTO_TEST_SUITE_END() // PRIVMSG_suite
-
-	BOOST_AUTO_TEST_SUITE(ROOMSTATE_suite)
-		using Twitch::irc::message::cap::tags::ROOMSTATE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (ROOMSTATE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (ROOMSTATE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(ROOMSTATE)
-		MATCH_TAGS_SUITE_TEMPLATE      (ROOMSTATE)
-	BOOST_AUTO_TEST_SUITE_END() // ROOMSTATE_suite
-
-	BOOST_AUTO_TEST_SUITE(USERNOTICE_suite)
-		using Twitch::irc::message::cap::tags::USERNOTICE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (USERNOTICE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (USERNOTICE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(USERNOTICE)
-		MATCH_TAGS_SUITE_TEMPLATE      (USERNOTICE)
-	BOOST_AUTO_TEST_SUITE_END() // USERNOTICE_suite
-
-	BOOST_AUTO_TEST_SUITE(USERSTATE_suite)
-		using Twitch::irc::message::cap::tags::USERSTATE;
-
-		MATCH_RAW_SUITE_TEMPLATE       (USERSTATE)
-		MATCH_COMMANDS_SUITE_TEMPLATE  (USERSTATE)
-		MATCH_MEMBERSHIP_SUITE_TEMPLATE(USERSTATE)
-		MATCH_TAGS_SUITE_TEMPLATE      (USERSTATE)
-	BOOST_AUTO_TEST_SUITE_END() // USERSTATE_suite
-BOOST_AUTO_TEST_SUITE_END() // tags_tests_suite
-
-*/

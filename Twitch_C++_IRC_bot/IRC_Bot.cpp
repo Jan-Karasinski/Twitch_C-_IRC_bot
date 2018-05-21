@@ -183,7 +183,6 @@ namespace Twitch::irc {
 				std::cerr << error.message() << '\n';
 				return;
 			}
-			Logger::DefaultLogger::get() << recived_message << '\n';
 			
 			auto parse_result = m_parser->process(recived_message);
 			boost::apply_visitor(
