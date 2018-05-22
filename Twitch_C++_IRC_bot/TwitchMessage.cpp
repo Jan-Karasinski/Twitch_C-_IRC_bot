@@ -96,9 +96,9 @@ namespace { // helpers
 	}
 
 	template<>
-	std::optional<std::chrono::seconds> get_optional(std::string&& raw) {
+	std::optional<Twitch::irc::message::cap::tags::timestamp_t> get_optional(std::string&& raw) {
 		try {
-			return std::chrono::seconds{ std::stoll(raw) };
+			return Twitch::irc::message::cap::tags::timestamp_t{ std::stoll(raw) };
 		}
 		catch (...) {
 			return std::nullopt;
@@ -115,9 +115,9 @@ namespace { // helpers
 		}
 	}
 
-	inline std::chrono::seconds get_ts(std::string&& raw) {
+	inline Twitch::irc::message::cap::tags::timestamp_t get_ts(std::string&& raw) {
 		using namespace std::chrono_literals;
-		return get_optional<std::chrono::seconds>(std::move(raw)).value_or(0s);
+		return get_optional<Twitch::irc::message::cap::tags::timestamp_t>(std::move(raw)).value_or(0s);
 	}
 
 	auto get_color(const std::string& raw_color) {
@@ -332,7 +332,7 @@ namespace Twitch::irc::message {
 					commands::CLEARCHAT{
 						match.str(channel), match.str(user)
 					},
-					get_optional<std::chrono::seconds>(match.str(duration)),
+					get_optional<timestamp_t>(match.str(duration)),
 					get_optional<std::string>(boost::replace_all_copy(match.str(reason), R"(\s)", " ")),
 					match.str(room_id),
 					get_optional<std::string>(match.str(target_user_id)),
@@ -342,11 +342,11 @@ namespace Twitch::irc::message {
 
 			CLEARCHAT::CLEARCHAT(
 				commands::CLEARCHAT&&        t_plain,
-				std::optional<std::chrono::seconds> t_duration,
+				std::optional<timestamp_t>   t_duration,
 				std::optional<std::string>&& t_reason,
 				std::string&&                t_room_id,
 				std::optional<std::string>&& t_target_user_id,
-				std::chrono::seconds         t_tmi_sent_ts
+				timestamp_t                  t_tmi_sent_ts
 			) :
 				cap::commands::CLEARCHAT{ std::move(t_plain) },
 				ban_duration(t_duration),
@@ -476,7 +476,7 @@ namespace Twitch::irc::message {
 				bool          t_mod,
 				std::string&& t_room_id,
 				bool          t_subscriber,
-				std::chrono::seconds t_tmi_sent_ts,
+				timestamp_t   t_tmi_sent_ts,
 				bool          t_turbo,
 				std::string&& t_user_id,
 				UserType      t_user_type
@@ -551,7 +551,7 @@ namespace Twitch::irc::message {
 					get_optional<bool>(match.str(r9k)),
 					get_optional<std::string>(match.str(rituals)),
 					match.str(room_id),
-					get_optional<std::chrono::seconds>(match.str(slow)),
+					get_optional<timestamp_t>(match.str(slow)),
 					get_optional<bool>(match.str(subs_only))
 				};
 			}
@@ -564,7 +564,7 @@ namespace Twitch::irc::message {
 				std::optional<bool>          t_r9k,
 				std::optional<std::string>&& t_rituals,
 				std::string&&                t_room_id,
-				std::optional<std::chrono::seconds> t_slow,
+				std::optional<timestamp_t>   t_slow,
 				std::optional<bool>          t_subs_only
 			) :
 				cap::commands::ROOMSTATE{ t_roomstate },
@@ -794,7 +794,7 @@ namespace Twitch::irc::message {
 				std::string&& t_room_id,
 				bool          t_subscriber,
 				std::string&& t_system_msg,
-				std::chrono::seconds t_tmi_sent_ts,
+				timestamp_t   t_tmi_sent_ts,
 				bool          t_turbo,
 				std::string&& t_user_id,
 				UserType      t_user_type

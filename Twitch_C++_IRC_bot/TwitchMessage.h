@@ -342,7 +342,7 @@ namespace Twitch::irc::message {
 				constexpr Color(int t_r, int t_g, int t_b) noexcept;
 
 				friend bool operator==(Color lhs, Color rhs) {
-					if (!(lhs.initialized && rhs.initialized)) { return false; }
+					if (lhs.initialized != rhs.initialized) { return false; }
 
 					return lhs.r == rhs.r
 						&& lhs.g == rhs.g
@@ -369,6 +369,8 @@ namespace Twitch::irc::message {
 				: initialized(true), r(t_r), g(t_g), b(t_b)
 			{
 			}
+
+			using timestamp_t = std::chrono::seconds;
 
 			// TODO: find missig badges and add
 			using BadgeLevel = int;
@@ -475,13 +477,13 @@ namespace Twitch::irc::message {
 				static std::optional<CLEARCHAT> is(std::string_view raw_message);
 
 				inline bool is_perm() const noexcept {
-					return ban_duration == std::chrono::seconds{ 0 }
+					return ban_duration == timestamp_t{ 0 }
 						&& !target_user_id.has_value()
 						&& !user.empty();
 				}
 				
 				inline bool is_timeout() const noexcept {
-					return ban_duration > std::chrono::seconds{ 0 }
+					return ban_duration > timestamp_t{ 0 }
 						&& !target_user_id.has_value()
 						&& !user.empty();
 				}
@@ -490,19 +492,19 @@ namespace Twitch::irc::message {
 					return user.empty();
 				}
 
-				const std::optional<std::chrono::seconds> ban_duration{ 0 }; // default == permanent
+				const std::optional<timestamp_t> ban_duration{ 0 }; // default == permanent
 				const std::optional<std::string> ban_reason;
 				const std::string                room_id;
 				const std::optional<std::string> target_user_id;
-				const std::chrono::seconds       tmi_sent_ts;
+				const timestamp_t       tmi_sent_ts;
 				
 				CLEARCHAT(
 					commands::CLEARCHAT&&        t_plain,
-					std::optional<std::chrono::seconds> t_duration,
+					std::optional<timestamp_t> t_duration,
 					std::optional<std::string>&& t_reason,
 					std::string&&                t_room_id,
 					std::optional<std::string>&& t_target_user_id,
-					std::chrono::seconds         t_tmi_sent_ts
+					timestamp_t         t_tmi_sent_ts
 				);
 
 				friend bool operator==(const CLEARCHAT& lhs, const CLEARCHAT& rhs);
@@ -540,21 +542,21 @@ namespace Twitch::irc::message {
 
 				const std::map<Badge, BadgeLevel> badges;
 				const unsigned int bits{ 0 }; // default == not bits msg
-				const Color color;
+				const Color       color;
 				const std::string display_name;
-				const bool emote_only{ false };
+				const bool        emote_only{ false };
 				const std::string emotes; // list of emotes and their pos in message, left unprocessed
 				const std::string id;
 				const bool        mod;
 				const std::string room_id;
 				const bool        subscriber;
-				const std::chrono::seconds tmi_sent_ts;
+				const timestamp_t tmi_sent_ts;
 				const bool        turbo;
 				const std::string user_id;
-				const UserType user_type;
+				const UserType    user_type;
 
 				PRIVMSG(
-					message::PRIVMSG&& t_plain,
+					message::PRIVMSG&&            t_plain,
 					std::map<Badge, BadgeLevel>&& t_badge,
 					unsigned int  t_bits,
 					Color         t_color,
@@ -565,7 +567,7 @@ namespace Twitch::irc::message {
 					bool          t_mod,
 					std::string&& t_room_id,
 					bool          t_subscriber,
-					std::chrono::seconds t_tmi_sent_ts,
+					timestamp_t   t_tmi_sent_ts,
 					bool          t_turbo,
 					std::string&& t_user_id,
 					UserType      t_user_type
@@ -599,7 +601,7 @@ namespace Twitch::irc::message {
 				const std::optional<bool>        r9k;
 				const std::optional<std::string> rituals; // doc doesn't say a word... std::string for safety
 				const std::string                room_id;
-				const std::optional<std::chrono::seconds> slow;
+				const std::optional<timestamp_t> slow;
 				const std::optional<bool>        subs_only;
 				
 				ROOMSTATE(
@@ -610,7 +612,7 @@ namespace Twitch::irc::message {
 					std::optional<bool>          t_r9k,
 					std::optional<std::string>&& t_rituals,
 					std::string&&                t_room_id,
-					std::optional<std::chrono::seconds> t_slow,
+					std::optional<timestamp_t> t_slow,
 					std::optional<bool>          t_subs_only
 				);
 
@@ -696,7 +698,7 @@ namespace Twitch::irc::message {
 				const std::string room_id;
 				const bool        subscriber;
 				const std::string system_msg;
-				const std::chrono::seconds tmi_sent_ts;
+				const timestamp_t tmi_sent_ts;
 				const bool        turbo;
 				const std::string user_id;
 				const UserType    user_type;
@@ -714,7 +716,7 @@ namespace Twitch::irc::message {
 					std::string&& t_room_id,
 					bool          t_subscriber,
 					std::string&& t_system_msg,
-					std::chrono::seconds t_tmi_sent_ts,
+					timestamp_t t_tmi_sent_ts,
 					bool          t_turbo,
 					std::string&& t_user_id,
 					UserType      t_user_type
@@ -757,7 +759,7 @@ namespace Twitch::irc::message {
 				friend Logger& operator<<(Logger& logger, const USERSTATE& msg);
 			};
 
-			// Badges & UserType::Type
+			// Badges, UserType, Color
 			template<class Logger>
 			Logger& operator<<(Logger& logger, Color color) {
 				if (!color.initialized) { return logger; }

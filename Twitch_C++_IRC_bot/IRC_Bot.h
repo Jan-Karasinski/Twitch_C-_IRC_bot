@@ -74,7 +74,7 @@ namespace Twitch::irc {
 			std::string t_server,
 			std::string t_port,
 			std::string t_channel, // should start with '#'
-			std::string t_nick,	  // all lower case
+			std::string t_nick,	   // all lower case
 			std::string t_pass,    // should start with "oauth:"
 			std::chrono::milliseconds t_write_delay
 		);
