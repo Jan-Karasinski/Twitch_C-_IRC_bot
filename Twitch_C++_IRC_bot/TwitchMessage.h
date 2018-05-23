@@ -18,6 +18,13 @@
 
 class ThreadSafeLogger;
 
+namespace helpers {
+	template<class Container, typename Key>
+	bool contains(const Container& cont, const Key& key) {
+		return cont.find(key) != std::end(cont);
+	}
+}
+
 namespace Twitch {
 	namespace irc {
 		struct Commands;
@@ -328,6 +335,8 @@ namespace Twitch::irc::message {
 
 		/// https://dev.twitch.tv/docs/irc#twitch-irc-capability-tags
 		namespace tags {
+			// TODO: separate classes for users, add user list for channel
+			// TODO: delete Color::initialized, replace Color params with std::optional<Color>
 			struct Color {
 				bool initialized{ false };
 				const int r{ 0 }, g{ 0 }, b{ 0 };
@@ -353,10 +362,8 @@ namespace Twitch::irc::message {
 				}
 			};
 
-			auto Color::from_string(
-				const std::string& r,
-				const std::string& g,
-				const std::string& b
+			auto Color::from_string( 
+				const std::string& r, const std::string& g, const std::string& b
 			) {
 				auto hex_to_int = [](const std::string& raw_hex) {
 					return std::stoi(raw_hex, 0, 16);
@@ -427,6 +434,10 @@ namespace Twitch::irc::message {
 				return "unhandled_badge";
 			}
 
+			enum class UserPrivilegesLevel : int {
+				normal = 0, regular, subscriber, moderator, broadcaster
+			};
+
 			struct UserType {
 				enum Type {
 					unhandled_type = -1,
@@ -481,30 +492,28 @@ namespace Twitch::irc::message {
 						&& !target_user_id.has_value()
 						&& !user.empty();
 				}
-				
 				inline bool is_timeout() const noexcept {
 					return ban_duration > timestamp_t{ 0 }
 						&& !target_user_id.has_value()
 						&& !user.empty();
 				}
-
 				inline bool is_clear() const noexcept {
 					return user.empty();
 				}
-
+				
 				const std::optional<timestamp_t> ban_duration{ 0 }; // default == permanent
 				const std::optional<std::string> ban_reason;
 				const std::string                room_id;
 				const std::optional<std::string> target_user_id;
-				const timestamp_t       tmi_sent_ts;
+				const timestamp_t                tmi_sent_ts;
 				
 				CLEARCHAT(
 					commands::CLEARCHAT&&        t_plain,
-					std::optional<timestamp_t> t_duration,
+					std::optional<timestamp_t>   t_duration,
 					std::optional<std::string>&& t_reason,
 					std::string&&                t_room_id,
 					std::optional<std::string>&& t_target_user_id,
-					timestamp_t         t_tmi_sent_ts
+					timestamp_t                  t_tmi_sent_ts
 				);
 
 				friend bool operator==(const CLEARCHAT& lhs, const CLEARCHAT& rhs);
@@ -519,11 +528,11 @@ namespace Twitch::irc::message {
 				static std::optional<GLOBALUSERSTATE> is(std::string_view raw_message);
 
 				const std::map<Badge, BadgeLevel> badges;
-				const Color color;
+				const Color       color;
 				const std::string display_name;
 				const std::string emote_set;
 				const std::string user_id;
-				const UserType user_type;
+				const UserType    user_type;
 
 				friend bool operator==(const GLOBALUSERSTATE& lhs, const GLOBALUSERSTATE& rhs);
 				friend bool operator!=(const GLOBALUSERSTATE& lhs, const GLOBALUSERSTATE& rhs);
@@ -532,12 +541,27 @@ namespace Twitch::irc::message {
 				friend Logger& operator<<(Logger& logger, const GLOBALUSERSTATE& msg);
 			};
 			struct PRIVMSG : public message::PRIVMSG
-			{ // TODO: add a way to check user privileges
+			{
 				static const std::regex regex;
 				static std::optional<PRIVMSG> is(std::string_view raw_message);
 
 				inline bool is_bitsmsg() const noexcept {
 					return bits != 0;
+				}
+
+				inline bool is_regular() const noexcept {
+					// TODO: implement
+					return false;
+				}
+
+				inline auto get_privileges_level() const {
+					if (badges.empty())                                { return UserPrivilegesLevel::normal     ; }
+					if (helpers::contains(badges, Badge::broadcaster)) { return UserPrivilegesLevel::broadcaster; }
+					if (helpers::contains(badges, Badge::moderator))   { return UserPrivilegesLevel::moderator  ; }
+					if (helpers::contains(badges, Badge::subscriber))  { return UserPrivilegesLevel::subscriber ; }
+					if (is_regular())                                  { return UserPrivilegesLevel::regular    ; }
+
+					return UserPrivilegesLevel::normal;
 				}
 
 				const std::map<Badge, BadgeLevel> badges;

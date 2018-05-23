@@ -311,6 +311,25 @@ namespace Twitch::irc::message {
 
 		}
 		namespace tags {
+			bool operator==(UserPrivilegesLevel lhs, UserPrivilegesLevel rhs) {
+				return static_cast<int>(lhs) == static_cast<int>(rhs);
+			}
+			bool operator!=(UserPrivilegesLevel lhs, UserPrivilegesLevel rhs) {
+				return !(lhs == rhs);
+			}
+			bool operator<(UserPrivilegesLevel lhs, UserPrivilegesLevel rhs) {
+				return static_cast<int>(lhs) < static_cast<int>(rhs);
+			}
+			bool operator>=(UserPrivilegesLevel lhs, UserPrivilegesLevel rhs) {
+				return !(lhs < rhs);
+			}
+			bool operator>(UserPrivilegesLevel lhs, UserPrivilegesLevel rhs) {
+				return static_cast<int>(lhs) > static_cast<int>(rhs);
+			}
+			bool operator<=(UserPrivilegesLevel lhs, UserPrivilegesLevel rhs) {
+				return !(lhs > rhs);
+			}
+
 			const std::regex CLEARCHAT::regex{
 				"@(?:ban-duration=([0-9]+);)?(?:ban-reason=([^; ]*);)?"
 				"room-id=([^; ]+);(?:target-user-id=([^; ]+);)?tmi-sent-ts=([0-9]+)"
