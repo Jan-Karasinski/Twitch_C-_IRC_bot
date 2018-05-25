@@ -2,7 +2,6 @@
 #define TWITCHMESSAGE_H
 #include "Logger.h"
 #include "IRC_Bot.h"
-#include <boost\log\trivial.hpp>
 #include <boost\variant.hpp>
 #include <boost\algorithm\string\predicate.hpp>
 #include <ctime>
