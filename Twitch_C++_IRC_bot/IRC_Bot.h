@@ -26,7 +26,7 @@ namespace Twitch::irc {
 	struct Commands
 	{ // TODO: thread safety
 		using key_type = std::string;
-		using cmd_handle_t = std::function<std::string(message::cap::tags::PRIVMSG const&)>;
+		using cmd_handle_t = std::function<std::string(const message::cap::tags::PRIVMSG &)>;
 		using value_type = std::map<std::string, cmd_handle_t>::value_type;
 		
 		static const std::string cmd_indicator;
@@ -38,8 +38,6 @@ namespace Twitch::irc {
 		Commands& operator=(const Commands& c);
 
 	private:
-		//Commands() = default;
-
 		std::map<std::string, cmd_handle_t> m_commands;
 		mutable std::mutex m_mutex;
 	};

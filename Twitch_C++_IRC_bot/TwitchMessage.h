@@ -14,7 +14,22 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
+#include <numeric>
+// Boost.Log print names // TODO: improve type-safety
+namespace boost::log {
+	template<class Logger>
+	Logger& operator<<(Logger& logger, const std::vector<std::string>& names) {
+		if (!names.empty()) {
+			const auto first = std::begin(names);
+			logger << *first;
+			for (auto it = std::next(first); it != std::end(names); ++it) {
+				logger << ' ' << *it;
+			}
+		}
+		return logger;
+	}
+}
+//
 class ThreadSafeLogger;
 
 namespace helpers {
@@ -349,14 +364,14 @@ namespace Twitch::irc::message {
 				Color() = default;
 				constexpr Color(int t_r, int t_g, int t_b) noexcept;
 
-				friend bool operator==(Color lhs, Color rhs) {
+				friend bool operator==(const Color& lhs, const Color& rhs) {
 					if (lhs.initialized != rhs.initialized) { return false; }
 
 					return lhs.r == rhs.r
 						&& lhs.g == rhs.g
 						&& lhs.b == rhs.b;
 				}
-				friend bool operator!=(Color lhs, Color rhs) {
+				friend bool operator!=(const Color& lhs, const Color& rhs) {
 					return !(lhs == rhs);
 				}
 			};
@@ -996,12 +1011,13 @@ namespace Twitch::irc::message {
 		inline std::string what() const noexcept { return err; }
 	};
 
-	// TODO: remove loggers & initialize Boost.Log to write to file and cout
-	template<class Logger>
 	struct ParserVisitor : public boost::static_visitor<void>
 	{ // TODO: add stats
+		mutable boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
+		using severity = boost::log::trivial::severity_level;
+
 	private:
-		std::string translate_sub_plan(const std::string_view raw_sub_plan) const {
+		inline std::string translate_sub_plan(const std::string_view raw_sub_plan) const {
 			using namespace std::string_view_literals;
 			using namespace std::string_literals;
 			if (raw_sub_plan == "Prime"sv) { return "Prime"s ; }
@@ -1014,205 +1030,32 @@ namespace Twitch::irc::message {
 
 		inline void handle_error(const boost::system::error_code& e) const noexcept {
 			if (e) {
-				Logger::get() << "Error: " << e.message() << '\n';
+				BOOST_LOG_SEV(lg, severity::debug) << "Error: " << e.message();
 			}
 		}
 
 	public:
-		void operator()(const ParseError& e) const {
-			Logger::get() << "Parse error: " << e.what() << '\n';
-		}
-		void operator()(const PING& ping) const {
-			using namespace std::string_literals;
-			Logger::get() << "PING :"s + ping.host << '\n';
-			handle_error(
-				m_controller->write("PONG :"s + ping.host)
-			);
-			BOOST_LOG_TRIVIAL(trace) << ping;
-		}
-		void operator()(const cap::tags::PRIVMSG& privmsg) const {
-			Logger::get() << privmsg << '\n';
-			// TODO: add commands
-			/*using namespace std::string_literals;
-			if (boost::starts_with(privmsg.message, Twitch::irc::Commands::cmd_indicator)) {
-				return;
-			}*/
+		void operator()(const ParseError& e) const;
+		void operator()(const PING& ping) const;
+		void operator()(const cap::tags::PRIVMSG& privmsg) const;
 
-			const auto str = privmsg.message.substr(0, privmsg.message.find(' '));
-			if (const auto command{ m_commands->find(str) }; command) {
-				handle_error(
-					m_controller->write(
-						"PRIVMSG "s + privmsg.channel + " :" + command(privmsg)
-					)
-				);
-			}
-		}
-
-		void operator()(const cap::membership::JOIN& msg) const {
-			Logger::get() << "Joins: " << msg.user << '\n';
-		}
-		void operator()(const cap::membership::PART& msg) const {
-			Logger::get() << "Parts: " << msg.user << '\n';
-		}
-		void operator()(const cap::tags::CLEARCHAT& msg) const {
-			if (msg.is_perm()) {
-				Logger::get()
-					<< msg.user
-					<< " has been permanently banned from this channel\n";
-			}
-			else if (msg.is_clear()) {
-				Logger::get()
-					<< "Chat has been cleared\n";
-			}
-			else {
-				Logger::get()
-					<< msg.user
-					<< " has been banned for "
-					<< msg.ban_duration.value().count()
-					<< "s from this channel\n";
-			}
-		}
-		void operator()(const cap::tags::USERNOTICE& msg) const {
-			using namespace std::string_literals;
-			const std::string response{ [&] {
-				using Sub     = cap::tags::USERNOTICE::Sub;
-				using Subgift = cap::tags::USERNOTICE::Subgift;
-				using Raid    = cap::tags::USERNOTICE::Raid;
-
-				if (auto* sub_details = boost::get<Sub>(&msg.msg_id); sub_details) {
-					return msg.display_name + " has subscribed to this channel"s;
-				}
-				if (auto* gift_details = boost::get<Subgift>(&msg.msg_id); gift_details) {
-					return gift_details->recipient_display_name
-						+ " gifted "s + translate_sub_plan(gift_details->sub_plan)
-						+ " subscription to "s
-						+ gift_details->recipient_name;
-				}
-				if (auto* raid_details = boost::get<Raid>(&msg.msg_id); raid_details) {
-					return raid_details->display_name
-						+ " is raiding with a party of "s
-						+ std::to_string(raid_details->viewer_count);
-				}
-				return std::string{};
-			}() };
-
-			if (!response.empty()) {
-				Logger::get() << response << '\n';
-			}
-		}
-		void operator()(const cap::commands::NOTICE& notice) const {
-			Logger::get() << "NOTICE: " << notice.message << '\n';
-		}
-		void operator()(const cap::tags::USERSTATE& state) const {
-			//Logger::get() << state << '\n';
-		}
-		void operator()(const cap::membership::MODE& msg) const {
-			if (msg.gained) {
-				Logger::get() << msg.user << " is now a moderator\n";
-			}
-			else {
-				Logger::get() << msg.user << " is no longer a moderator\n";
-			}
-		}
-		void operator()(const cap::commands::HOSTTARGET& host) const {
-			if (host.starts()) {
-				Logger::get()
-					<< "This channel is now hosting "
-					<< host.target_channel
-					<< '\n';
-			}
-			else {
-				Logger::get()
-					<< "This channel is no longer hosting\n";
-			}
-		}
-		void operator()(const cap::tags::GLOBALUSERSTATE& state) const {
-			//Logger::get() << state << '\n';
-		}
-		void operator()(const cap::tags::ROOMSTATE& roomstate) const {
-			if (roomstate.is_update()) {
-				if (roomstate.emote_only) {
-					Logger::get()
-						<< (roomstate.emote_only.value()
-						? "Channel is no longer in emote only mode\n"
-						: "Channel is now in emote only mode\n");
-				}
-				else if (roomstate.followers_only) {
-					if (roomstate.followers_only.value() == -1) {
-						Logger::get()
-							<< "Channel is no longer in followers only mode\n";
-					}
-					else {
-						Logger::get()
-							<< "Channel is now in "
-							<< roomstate.followers_only.value()
-							<< "t followers only mode\n";
-					}
-				}
-				else if (roomstate.r9k) {
-					Logger::get()
-						<< (roomstate.r9k.value()
-						? "Channel is no longer in r9k mode\n"
-						: "Channel is now in r9k mode\n");
-				}
-				else if (roomstate.rituals) {
-					Logger::get() << roomstate.rituals.value() << '\n';
-				}
-				else if (roomstate.slow) {
-					using namespace std::chrono_literals;
-					if (roomstate.slow.value() == 0s) {
-						Logger::get()
-							<< "Channel is no longer in slow mode\n";
-					}
-					else {
-						Logger::get()
-							<< "Channel is now in "
-							<< roomstate.slow.value().count()
-							<< "s slow mode\n";
-					}
-				}
-				else if (roomstate.subs_only) {
-					Logger::get()
-						<< (roomstate.subs_only.value()
-						? "Channel is no longer in sub only mode\n"
-						: "Channel is now in sub only mode\n");
-				}
-			}
-			else {
-				Logger::get() << roomstate << '\n';
-			}
-		}
-		void operator()(const cap::membership::NAMES& list) const {
-			if (list.is_end_of_list()) {
-				Logger::get() << "End of /NAMES list\n";
-			}
-			else {
-				auto logger = std::move(Logger::get() << list.channel << " viewers: ");
-				if (!list.names.empty()) {
-					const auto first = std::begin(list.names);
-					logger << *first;
-					for (auto it = std::next(first); it != std::end(list.names); ++it) {
-						logger << ' ' << *it;
-					}
-				}
-				logger << '\n';
-			}
-		}
-		void operator()([[maybe_unused]] const cap::commands::RECONNECT& r) const {
-			Logger::get() << "Reconnecting...\n";
-			
-			while (const error_code_t error = m_controller->reconnect()) {
-				Logger::get() << error.message() << '\n';
-			}
-		}
+		void operator()(const cap::membership::JOIN& msg) const;
+		void operator()(const cap::membership::PART& msg) const;
+		void operator()(const cap::tags::CLEARCHAT& msg) const;
+		void operator()(const cap::tags::USERNOTICE& msg) const;
+		void operator()(const cap::commands::NOTICE& notice) const;
+		void operator()(const cap::tags::USERSTATE& state) const;
+		void operator()(const cap::membership::MODE& msg) const;
+		void operator()(const cap::commands::HOSTTARGET& host) const;
+		void operator()(const cap::tags::GLOBALUSERSTATE& state) const;
+		void operator()(const cap::tags::ROOMSTATE& roomstate) const;
+		void operator()(const cap::membership::NAMES& list) const;
+		void operator()([[maybe_unused]] const cap::commands::RECONNECT&) const;
 
 		ParserVisitor(
 			Twitch::irc::IController* t_controller,
 			Twitch::irc::Commands* t_commands
-		) :
-			m_controller(t_controller),
-			m_commands(t_commands)
-		{}
+		);
 
 	private:
 		Twitch::irc::IController* m_controller;
@@ -1243,9 +1086,9 @@ namespace Twitch::irc::message {
 
 		result_t process(std::string_view recived_message);
 
-		template<class TLogger = Logger::DefaultLogger>
-		inline ParserVisitor<TLogger> get_visitor(Commands* t_commands) {
-			return { m_controller.get(), t_commands };
+		inline ParserVisitor get_visitor(Commands* t_commands) {
+			static ParserVisitor visitor{ m_controller.get(), t_commands };
+			return visitor;
 		}
 
 		MessageParser(std::shared_ptr<IController> irc_controller);

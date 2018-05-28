@@ -14,7 +14,7 @@ namespace Twitch::irc {
 	using namespace std::string_literals;
 	const std::string Commands::cmd_indicator{ "!"s };
 
-	Commands::cmd_handle_t Commands::find(const std::string & key) const {
+	Commands::cmd_handle_t Commands::find(const std::string& key) const {
 		std::lock_guard<std::mutex> lock{ m_mutex };
 		const auto pos = m_commands.find(key);
 
@@ -176,14 +176,19 @@ namespace Twitch::irc {
 			std::cerr << error.message() << '\n';
 			return;
 		}
-
+		
+		boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
+		using severity = boost::log::trivial::severity_level;
 		while (m_controller->is_alive()) {
 			auto [error, recived_message] = m_controller->read();
 			if (error) {
 				std::cerr << error.message() << '\n';
 				return;
 			}
-			
+#ifdef TWITCH_IRC_COLLECT_SAMPLES
+			BOOST_LOG_SEV(lg, severity::trace)
+				<< " UNPROCESSED: " << recived_message;
+#endif
 			auto parse_result = m_parser->process(recived_message);
 			boost::apply_visitor(
 				m_parser->get_visitor(&m_commands),

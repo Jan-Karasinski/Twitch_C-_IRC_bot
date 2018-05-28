@@ -366,6 +366,10 @@ namespace doc {
 						HOSTTARGET{ "#hosting_channel"s, "<channel>"s, 0 }
 					},
 					{
+						":tmi.twitch.tv HOSTTARGET #hosting :channel -"s,
+						HOSTTARGET{ "#hosting"s, "channel"s, 0 }
+					},
+					{
 						":tmi.twitch.tv HOSTTARGET #hosting_channel :- [0]"s,
 						HOSTTARGET{ "#hosting_channel"s, ""s, 0 }
 					}
@@ -387,7 +391,7 @@ namespace doc {
 
 				const std::vector<std::pair<std::string, RECONNECT>> tests{
 					{
-						"RECONNECT"s,
+						":tmi.twitch.tv RECONNECT"s,
 						RECONNECT{}
 					}
 				};

@@ -96,10 +96,6 @@ int main() {
 
 	Logger::init();
 
-	boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
-
-	BOOST_LOG_SEV(lg, boost::log::trivial::severity_level::trace) << "test";
-	return 0;
 	auto controller{
 		std::make_shared<Twitch::irc::Controller>(
 			config->server, config->port, config->channel,

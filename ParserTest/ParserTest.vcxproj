@@ -170,6 +170,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Twitch_C++_IRC_bot\IRC_Bot.cpp" />
     <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessage.cpp" />
     <ClCompile Include="ParserTest.cpp" />
     <ClCompile Include="stdafx.cpp">
