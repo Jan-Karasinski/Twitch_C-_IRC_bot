@@ -1,6 +1,7 @@
 #ifndef IRC_BOT_H
 #define IRC_BOT_H
-#include "TwitchMessage.h"
+//#include "TwitchMessage.h"
+#include "Logger.h"
 #include <WinSock2.h>
 #include <boost\asio.hpp>
 #include <chrono>
@@ -17,12 +18,14 @@ namespace Twitch::irc {
 			struct PRIVMSG;
 		}
 	}
+
 	using io_service_t = boost::asio::io_service;
 	using resolver_t   = boost::asio::ip::tcp::resolver;
 	using socket_t     = boost::asio::ip::tcp::socket;
 	using streambuf_t  = boost::asio::streambuf;
 	using error_code_t = boost::system::error_code;
-	
+	using logger_t     = boost::log::sources::severity_logger_mt<boost::log::trivial::severity_level>;
+
 	struct Commands
 	{ // TODO: thread safety
 		using key_type = std::string;
@@ -127,6 +130,8 @@ namespace Twitch::irc {
 		Commands m_commands;
 		std::shared_ptr<IController> m_controller;
 		std::unique_ptr<message::MessageParser> m_parser;
+
+		mutable logger_t m_lg{};
 	};
 }  // namespace Twitch::irc
 #endif

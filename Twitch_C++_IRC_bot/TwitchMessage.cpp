@@ -1106,7 +1106,7 @@ namespace Twitch::irc::message {
 	} // namespace cap
 
 	void ParserVisitor::operator()(const ParseError& e) const {
-		BOOST_LOG_SEV(lg, severity::error) << "Parse error: " << e.what();
+		BOOST_LOG_SEV(m_lg, severity::error) << "Parse error: " << e.what();
 	}
 	void ParserVisitor::operator()(const PING& ping) const {
 		using namespace std::string_literals;
@@ -1114,10 +1114,10 @@ namespace Twitch::irc::message {
 			m_controller->write("PONG :"s + ping.host)
 		);
 
-		BOOST_LOG_SEV(lg, severity::trace) << "PING :" << ping.host;
+		BOOST_LOG_SEV(m_lg, severity::trace) << "PING :" << ping.host;
 	}
 	void ParserVisitor::operator()(const cap::tags::PRIVMSG& privmsg) const {
-		BOOST_LOG_SEV(lg, severity::trace) << privmsg;
+		BOOST_LOG_SEV(m_lg, severity::trace) << privmsg;
 		// TODO: add commands
 		/*using namespace std::string_literals;
 		if (boost::starts_with(privmsg.message, Twitch::irc::Commands::cmd_indicator)) {
@@ -1136,23 +1136,23 @@ namespace Twitch::irc::message {
 	}
 
 	void ParserVisitor::operator()(const cap::membership::JOIN& msg) const {
-		BOOST_LOG_SEV(lg, severity::trace) << "Joins: " << msg.user;
+		BOOST_LOG_SEV(m_lg, severity::trace) << "Joins: " << msg.user;
 	}
 	void ParserVisitor::operator()(const cap::membership::PART& msg) const {
-		BOOST_LOG_SEV(lg, severity::trace) << "Parts: " << msg.user;
+		BOOST_LOG_SEV(m_lg, severity::trace) << "Parts: " << msg.user;
 	}
 	void ParserVisitor::operator()(const cap::tags::CLEARCHAT& msg) const {
 		if (msg.is_perm()) {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< msg.user
 				<< " has been permanently banned from this channel";
 		}
 		else if (msg.is_clear()) {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< "Chat has been cleared";
 		}
 		else {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< msg.user
 				<< " has been banned for "
 				<< msg.ban_duration.value().count()
@@ -1184,113 +1184,115 @@ namespace Twitch::irc::message {
 		}() };
 
 		if (!response.empty()) {
-			BOOST_LOG_SEV(lg, severity::trace) << response;
+			BOOST_LOG_SEV(m_lg, severity::trace) << response;
 		}
 	}
 	void ParserVisitor::operator()(const cap::commands::NOTICE& notice) const {
-		BOOST_LOG_SEV(lg, severity::trace) << "NOTICE: " << notice.message;
+		BOOST_LOG_SEV(m_lg, severity::trace) << "NOTICE: " << notice.message;
 	}
 	void ParserVisitor::operator()(const cap::tags::USERSTATE& state) const {
-		BOOST_LOG_SEV(lg, severity::trace) << state;
+		BOOST_LOG_SEV(m_lg, severity::trace) << state;
 	}
 	void ParserVisitor::operator()(const cap::membership::MODE& msg) const {
-		BOOST_LOG_SEV(lg, severity::trace)
+		BOOST_LOG_SEV(m_lg, severity::trace)
 			<< msg.user
 			<< (msg.gained ? " is now" : " is no longer")
 			<< " a moderator";
 	}
 	void ParserVisitor::operator()(const cap::commands::HOSTTARGET& host) const {
 		if (host.starts()) {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< "This channel is now hosting "
 				<< host.target_channel;
 		}
 		else {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< "This channel is no longer hosting";
 		}
 	}
 	void ParserVisitor::operator()(const cap::tags::GLOBALUSERSTATE& state) const {
-		BOOST_LOG_SEV(lg, severity::trace) << state;
+		BOOST_LOG_SEV(m_lg, severity::trace) << state;
 	}
 	void ParserVisitor::operator()(const cap::tags::ROOMSTATE& roomstate) const {
 		if (roomstate.is_update()) {
 			if (roomstate.emote_only) {
-				BOOST_LOG_SEV(lg, severity::trace)
+				BOOST_LOG_SEV(m_lg, severity::trace)
 					<< (roomstate.emote_only.value()
 						? "Channel is no longer in emote only mode"
 						: "Channel is now in emote only mode");
 			}
 			else if (roomstate.followers_only) {
 				if (roomstate.followers_only.value() == -1) {
-					BOOST_LOG_SEV(lg, severity::trace)
+					BOOST_LOG_SEV(m_lg, severity::trace)
 						<< "Channel is no longer in followers only mode";
 				}
 				else {
-					BOOST_LOG_SEV(lg, severity::trace)
+					BOOST_LOG_SEV(m_lg, severity::trace)
 						<< "Channel is now in "
 						<< roomstate.followers_only.value()
 						<< "s followers only mode";
 				}
 			}
 			else if (roomstate.r9k) {
-				BOOST_LOG_SEV(lg, severity::trace)
+				BOOST_LOG_SEV(m_lg, severity::trace)
 					<< (roomstate.r9k.value()
 						? "Channel is no longer in r9k mode"
 						: "Channel is now in r9k mode");
 			}
 			else if (roomstate.rituals) {
-				BOOST_LOG_SEV(lg, severity::trace)
+				BOOST_LOG_SEV(m_lg, severity::trace)
 					<< roomstate.rituals.value();
 			}
 			else if (roomstate.slow) {
 				using namespace std::chrono_literals;
 				if (roomstate.slow.value() == 0s) {
-					BOOST_LOG_SEV(lg, severity::trace)
+					BOOST_LOG_SEV(m_lg, severity::trace)
 						<< "Channel is no longer in slow mode";
 				}
 				else {
-					BOOST_LOG_SEV(lg, severity::trace)
+					BOOST_LOG_SEV(m_lg, severity::trace)
 						<< "Channel is now in "
 						<< roomstate.slow.value().count()
 						<< "s slow mode";
 				}
 			}
 			else if (roomstate.subs_only) {
-				BOOST_LOG_SEV(lg, severity::trace)
+				BOOST_LOG_SEV(m_lg, severity::trace)
 					<< (roomstate.subs_only.value()
 						? "Channel is no longer in sub only mode"
 						: "Channel is now in sub only mode");
 			}
 		}
 		else {
-			BOOST_LOG_SEV(lg, severity::trace) << roomstate;
+			BOOST_LOG_SEV(m_lg, severity::trace) << roomstate;
 		}
 	}
 	void ParserVisitor::operator()(const cap::membership::NAMES& list) const {
 		if (list.is_end_of_list()) {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< "End of /NAMES list";
 		}
 		else {
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< list.channel << " viewers: " << list.names;
 		}
 	}
 	void ParserVisitor::operator()([[maybe_unused]] const cap::commands::RECONNECT&) const {
-		BOOST_LOG_SEV(lg, severity::trace) << "Reconnecting...";
+		BOOST_LOG_SEV(m_lg, severity::trace) << "Reconnecting...";
 
 		while (const error_code_t error = m_controller->reconnect()) {
-			BOOST_LOG_SEV(lg, severity::trace) << error.message();
+			BOOST_LOG_SEV(m_lg, severity::trace) << error.message();
 		}
 	}
 
 	ParserVisitor::ParserVisitor(
 		Twitch::irc::IController* t_controller,
-		Twitch::irc::Commands* t_commands
+		Twitch::irc::Commands* t_commands,
+		Twitch::irc::logger_t& t_logger
 	) :
 		m_controller(t_controller),
-		m_commands(t_commands)
+		m_commands(t_commands),
+		m_lg(t_logger)
 	{}
 
 	MessageParser::result_t MessageParser::process(std::string_view recived_message) {

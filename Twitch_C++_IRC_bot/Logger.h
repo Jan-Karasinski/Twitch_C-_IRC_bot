@@ -2,15 +2,12 @@
 #define LOGGER_H
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
-#include "TwitchMessage.h"
-
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/filesystem.hpp>
-#include <fstream>
 #include <ios>
 #include <iostream>
 

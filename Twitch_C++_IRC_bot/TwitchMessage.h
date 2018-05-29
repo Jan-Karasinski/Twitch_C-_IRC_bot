@@ -4,17 +4,13 @@
 #include "IRC_Bot.h"
 #include <boost\variant.hpp>
 #include <boost\algorithm\string\predicate.hpp>
-#include <ctime>
 #include <chrono>
-#include <iostream>
-#include <map>
 #include <memory>
 #include <optional>
 #include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <numeric>
 // Boost.Log print names // TODO: improve type-safety
 namespace boost::log {
 	template<class Logger>
@@ -349,6 +345,8 @@ namespace Twitch::irc::message {
 
 		/// https://dev.twitch.tv/docs/irc#twitch-irc-capability-tags
 		namespace tags {
+			using timestamp_t = std::chrono::seconds;
+
 			// TODO: separate classes for users, add user list for channel
 			// TODO: delete Color::initialized, replace Color params with std::optional<Color>
 			struct Color {
@@ -390,8 +388,6 @@ namespace Twitch::irc::message {
 				: initialized(true), r(t_r), g(t_g), b(t_b)
 			{
 			}
-
-			using timestamp_t = std::chrono::seconds;
 
 			// TODO: find missig badges and add
 			using BadgeLevel = int;
@@ -1013,9 +1009,6 @@ namespace Twitch::irc::message {
 
 	struct ParserVisitor : public boost::static_visitor<void>
 	{ // TODO: add stats
-		mutable boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
-		using severity = boost::log::trivial::severity_level;
-
 	private:
 		inline std::string translate_sub_plan(const std::string_view raw_sub_plan) const {
 			using namespace std::string_view_literals;
@@ -1030,11 +1023,13 @@ namespace Twitch::irc::message {
 
 		inline void handle_error(const boost::system::error_code& e) const noexcept {
 			if (e) {
-				BOOST_LOG_SEV(lg, severity::debug) << "Error: " << e.message();
+				BOOST_LOG_SEV(m_lg, severity::debug) << "Error: " << e.message();
 			}
 		}
 
 	public:
+		using severity = boost::log::trivial::severity_level;
+
 		void operator()(const ParseError& e) const;
 		void operator()(const PING& ping) const;
 		void operator()(const cap::tags::PRIVMSG& privmsg) const;
@@ -1054,12 +1049,14 @@ namespace Twitch::irc::message {
 
 		ParserVisitor(
 			Twitch::irc::IController* t_controller,
-			Twitch::irc::Commands* t_commands
+			Twitch::irc::Commands* t_commands,
+			Twitch::irc::logger_t& t_logger
 		);
 
 	private:
 		Twitch::irc::IController* m_controller;
 		Twitch::irc::Commands* m_commands;
+		Twitch::irc::logger_t& m_lg;
 	};
 
 	// for all caps
@@ -1086,8 +1083,11 @@ namespace Twitch::irc::message {
 
 		result_t process(std::string_view recived_message);
 
-		inline ParserVisitor get_visitor(Commands* t_commands) {
-			static ParserVisitor visitor{ m_controller.get(), t_commands };
+		inline ParserVisitor get_visitor(
+			Commands* t_commands,
+			logger_t& lg
+		) {
+			static ParserVisitor visitor{ m_controller.get(), t_commands, lg };
 			return visitor;
 		}
 

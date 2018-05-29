@@ -2,6 +2,7 @@
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #include "IRC_Bot.h"
+#include "TwitchMessage.h"
 #include "Logger.h"
 #include <boost\algorithm\string.hpp>
 #include <boost\algorithm\string\predicate.hpp>
@@ -177,7 +178,6 @@ namespace Twitch::irc {
 			return;
 		}
 		
-		boost::log::sources::severity_logger<boost::log::trivial::severity_level> lg;
 		using severity = boost::log::trivial::severity_level;
 		while (m_controller->is_alive()) {
 			auto [error, recived_message] = m_controller->read();
@@ -186,12 +186,12 @@ namespace Twitch::irc {
 				return;
 			}
 #ifdef TWITCH_IRC_COLLECT_SAMPLES
-			BOOST_LOG_SEV(lg, severity::trace)
+			BOOST_LOG_SEV(m_lg, severity::trace)
 				<< " UNPROCESSED: " << recived_message;
 #endif
 			auto parse_result = m_parser->process(recived_message);
 			boost::apply_visitor(
-				m_parser->get_visitor(&m_commands),
+				m_parser->get_visitor(&m_commands, m_lg),
 				parse_result
 			);
 
