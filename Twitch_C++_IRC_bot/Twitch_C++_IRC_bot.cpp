@@ -105,17 +105,23 @@ int main() {
 	};
 
 	using Twitch::irc::message::cap::tags::PRIVMSG;
-	Twitch::irc::TwitchBot bot(
-		{
-			{
-				"!Hello",
-				[](const PRIVMSG& msg) {
-					return '@' + msg.display_name + " World!";
+	auto commands{
+		std::make_shared<Twitch::irc::Commands>(
+			std::initializer_list<Twitch::irc::Commands::value_type>{
+				{
+					"!Hello",
+					[](const PRIVMSG& msg) {
+						return '@' + msg.display_name + " World!";
+					}
 				}
 			}
-		},
+		)
+	};
+
+	Twitch::irc::TwitchBot bot(
+		commands,
 		controller,
-		std::make_unique<Twitch::irc::message::MessageParser>(controller)
+		std::make_unique<Twitch::irc::message::MessageParser>()
 	);
 	bot.run();
 }

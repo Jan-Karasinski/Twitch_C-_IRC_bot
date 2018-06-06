@@ -26,7 +26,6 @@ namespace boost::log {
 	}
 }
 //
-class ThreadSafeLogger;
 
 namespace helpers {
 	template<class Container, typename Key>
@@ -1048,14 +1047,14 @@ namespace Twitch::irc::message {
 		void operator()([[maybe_unused]] const cap::commands::RECONNECT&) const;
 
 		ParserVisitor(
-			Twitch::irc::IController* t_controller,
-			Twitch::irc::Commands* t_commands,
+			std::shared_ptr<Twitch::irc::IController> m_controller,
+			std::shared_ptr<Twitch::irc::Commands> t_commands,
 			Twitch::irc::logger_t& t_logger
 		);
 
 	private:
-		Twitch::irc::IController* m_controller;
-		Twitch::irc::Commands* m_commands;
+		std::shared_ptr<Twitch::irc::IController>  m_controller;
+		std::shared_ptr<Twitch::irc::Commands>     m_commands;
 		Twitch::irc::logger_t& m_lg;
 	};
 
@@ -1084,17 +1083,15 @@ namespace Twitch::irc::message {
 		result_t process(std::string_view recived_message);
 
 		inline ParserVisitor get_visitor(
-			Commands* t_commands,
+			std::shared_ptr<IController> t_controller,
+			std::shared_ptr<Commands> t_commands,
 			logger_t& lg
 		) {
-			static ParserVisitor visitor{ m_controller.get(), t_commands, lg };
+			static ParserVisitor visitor{ t_controller, t_commands, lg };
 			return visitor;
 		}
 
-		MessageParser(std::shared_ptr<IController> irc_controller);
-
-	private:
-		std::shared_ptr<IController> m_controller;
+		MessageParser() = default;
 	};
 
 } // namespace Twitch::irc::message

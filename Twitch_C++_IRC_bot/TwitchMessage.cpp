@@ -1110,28 +1110,35 @@ namespace Twitch::irc::message {
 	}
 	void ParserVisitor::operator()(const PING& ping) const {
 		using namespace std::string_literals;
-		handle_error(
-			m_controller->write("PONG :"s + ping.host)
-		);
+		m_controller->enqueue("PONG :"s + ping.host, true);
 
 		BOOST_LOG_SEV(m_lg, severity::trace) << "PING :" << ping.host;
 	}
 	void ParserVisitor::operator()(const cap::tags::PRIVMSG& privmsg) const {
 		BOOST_LOG_SEV(m_lg, severity::trace) << privmsg;
 		// TODO: add commands
-		/*using namespace std::string_literals;
-		if (boost::starts_with(privmsg.message, Twitch::irc::Commands::cmd_indicator)) {
-		return;
-		}*/
+		if (privmsg.message.size() < m_commands->min_cmd_word_size()) { return; }
 
 		using namespace std::string_literals;
 		const auto str = privmsg.message.substr(0, privmsg.message.find(' '));
 		if (const auto command{ m_commands->find(str) }; command) {
-			handle_error(
-				m_controller->write(
-					"PRIVMSG "s + privmsg.channel + " :"s + command(privmsg)
-				)
+			// TODO: find better solution. condition_variable::wait_for()?
+			std::thread async_add(
+				[](auto message, auto command, std::weak_ptr<Twitch::irc::IRCWriter> writer) {
+					auto response = command(message);
+					if (!writer.expired()) {
+						using namespace std::string_literals;
+						writer.lock()->enqueue(
+							"PRIVMSG "s + message.channel
+							+ " :"s + std::move(response)
+						);
+					}
+				},
+				privmsg,
+				command,
+				m_controller
 			);
+			async_add.detach();
 		}
 	}
 
@@ -1286,8 +1293,8 @@ namespace Twitch::irc::message {
 	}
 
 	ParserVisitor::ParserVisitor(
-		Twitch::irc::IController* t_controller,
-		Twitch::irc::Commands* t_commands,
+		std::shared_ptr<Twitch::irc::IController>  t_controller,
+		std::shared_ptr<Twitch::irc::Commands> t_commands,
 		Twitch::irc::logger_t& t_logger
 	) :
 		m_controller(t_controller),
@@ -1361,10 +1368,5 @@ namespace Twitch::irc::message {
 			using namespace std::string_literals;
 			return ParseError{ "Unknown exception"s };
 		}
-	}
-
-	MessageParser::MessageParser(std::shared_ptr<IController> irc_controller)
-		: m_controller(std::move(irc_controller))
-	{
 	}
 }
