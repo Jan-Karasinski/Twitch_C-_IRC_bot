@@ -166,12 +166,14 @@
     <ClInclude Include="..\Twitch_C++_IRC_bot\IRC_Bot.h" />
     <ClInclude Include="..\Twitch_C++_IRC_bot\Logger.h" />
     <ClInclude Include="..\Twitch_C++_IRC_bot\TwitchMessage.h" />
+    <ClInclude Include="..\Twitch_C++_IRC_bot\TwitchMessageParams.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Twitch_C++_IRC_bot\IRC_Bot.cpp" />
     <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessage.cpp" />
+    <ClCompile Include="..\Twitch_C++_IRC_bot\TwitchMessageParams.cpp" />
     <ClCompile Include="ParserTest.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

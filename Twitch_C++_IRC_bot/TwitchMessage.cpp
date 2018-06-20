@@ -2,6 +2,7 @@
 #define _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #include "TwitchMessage.h"
+#include "TwitchMessageParams.h"
 #include "IRC_Bot.h"
 #include <boost\log\trivial.hpp>
 #include <boost\algorithm\string\classification.hpp>
@@ -14,9 +15,9 @@
 #include <type_traits>
 
 namespace { // helpers
-	using Twitch::irc::message::cap::tags::Badge;
-	using Twitch::irc::message::cap::tags::BadgeLevel;
-	using Twitch::irc::message::cap::tags::UserType;
+	using Twitch::irc::parameters::Badge;
+	using Twitch::irc::parameters::BadgeLevel;
+	using Twitch::irc::parameters::UserType;
 
 	std::map<Badge, BadgeLevel> get_badges(std::string_view raw_badges) {
 		if (raw_badges.empty()) { return {}; }
@@ -121,10 +122,12 @@ namespace { // helpers
 	}
 
 	auto get_color(const std::string& raw_color) {
-		using Twitch::irc::message::cap::tags::Color;
+		using Twitch::irc::parameters::Color;
+		using Twitch::irc::parameters::NoColor;
+
 		// raw_color format = #RRGGBB
 		constexpr const std::size_t proper_length = 7;
-		if (raw_color.size() != proper_length) { return Color{}; }
+		if (raw_color.size() != proper_length) { return Color{ NoColor{} }; }
 
 		constexpr const std::size_t offset = 1;
 		constexpr const std::size_t length = 2;

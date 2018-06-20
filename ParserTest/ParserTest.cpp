@@ -126,7 +126,8 @@ namespace doc {
 			}
 			namespace globaluserstate {
 				using Twitch::irc::message::cap::tags::GLOBALUSERSTATE;
-				using Twitch::irc::message::cap::tags::Color;
+				using Twitch::irc::parameters::Color;
+				using Twitch::irc::parameters::NoColor;
 
 				const std::vector<std::pair<std::string, GLOBALUSERSTATE>> tests{
 					{
@@ -142,9 +143,10 @@ namespace doc {
 			}
 			namespace privmsg {
 				using Twitch::irc::message::cap::tags::PRIVMSG;
-				using Twitch::irc::message::cap::tags::Color;
-				using Twitch::irc::message::cap::tags::Badge;
-				using Twitch::irc::message::cap::tags::UserType;
+				using Twitch::irc::parameters::Color;
+				using Twitch::irc::parameters::NoColor;
+				using Twitch::irc::parameters::Badge;
+				using Twitch::irc::parameters::UserType;
 				
 				const std::vector<std::pair<std::string, PRIVMSG>> tests{
 					{
@@ -155,7 +157,7 @@ namespace doc {
 						" :ronni!ronni@ronni.tmi.twitch.tv PRIVMSG #dallas :cheer100"s,
 						PRIVMSG{
 							Twitch::irc::message::PRIVMSG{ "ronni"s, "tmi.twitch.tv"s, "#dallas"s, "cheer100"s },
-							{ { Badge::staff, 1 }, { Badge::bits, 1000 } }, 100, Color{}, "dallas"s,
+							{ { Badge::staff, 1 }, { Badge::bits, 1000 } }, 100, NoColor{}, "dallas"s,
 							false, ""s, "b34ccfc7-4977-403a-8a94-33c6bac34fb8"s,
 							false, "1337"s, false, std::chrono::seconds{ 1507246572675 },
 							true, "1337"s, UserType::staff
@@ -228,9 +230,10 @@ namespace doc {
 			}
 			namespace usernotice {
 				using Twitch::irc::message::cap::tags::USERNOTICE;
-				using Twitch::irc::message::cap::tags::Color;
-				using Twitch::irc::message::cap::tags::Badge;
-				using Twitch::irc::message::cap::tags::UserType;
+				using Twitch::irc::parameters::Color;
+				using Twitch::irc::parameters::NoColor;
+				using Twitch::irc::parameters::Badge;
+				using Twitch::irc::parameters::UserType;
 
 				const std::vector<std::pair<std::string, USERNOTICE>> tests{
 					{
@@ -310,7 +313,7 @@ namespace doc {
 							Twitch::irc::message::cap::commands::USERNOTICE{
 								"#seventoes"s, "HeyGuys"s
 							},
-							{}, Color{},
+							{}, NoColor{},
 							"SevenTest1"s, "30259:0-6"s, "37feed0f-b9c7-4c3a-b475-21c6c6d21c3d"s,
 							"seventest1"s, false,
 							USERNOTICE::Ritual{},
@@ -322,9 +325,9 @@ namespace doc {
 			}
 			namespace userstate {
 				using Twitch::irc::message::cap::tags::USERSTATE;
-				using Twitch::irc::message::cap::tags::Color;
-				using Twitch::irc::message::cap::tags::Badge;
-				using Twitch::irc::message::cap::tags::UserType;
+				using Twitch::irc::parameters::Color;
+				using Twitch::irc::parameters::Badge;
+				using Twitch::irc::parameters::UserType;
 
 				const std::vector<std::pair<std::string, USERSTATE>> tests{
 					{

@@ -168,6 +168,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TwitchMessage.h" />
+    <ClInclude Include="TwitchMessageParams.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IRC_Bot.cpp" />
@@ -178,6 +179,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="TwitchMessage.cpp" />
+    <ClCompile Include="TwitchMessageParams.cpp" />
     <ClCompile Include="Twitch_C++_IRC_bot.cpp" />
   </ItemGroup>
   <ItemGroup>
